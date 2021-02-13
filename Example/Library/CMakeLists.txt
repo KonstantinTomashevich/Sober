@@ -1,0 +1,7 @@
+add_subdirectory (ApplicationLogic)
+add_subdirectory (DisplayConsoleASCII)
+add_subdirectory (DisplayTestStub)
+add_subdirectory (PersistenceBinary)
+add_subdirectory (PersistencePlainText)
+add_subdirectory (PersistenceTestStub)
+sober_exit_submodule ()

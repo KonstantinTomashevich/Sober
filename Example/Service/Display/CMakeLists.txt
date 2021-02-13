@@ -1,0 +1,10 @@
+sober_begin_service (Display)
+    sober_declare_service_api (API)
+    sober_declare_service_implementations (Implementation)
+    sober_declare_default_service_implementation (ConsoleASCII)
+
+    sober_start_service_definition ()
+        sober_define_service_implementation ()
+        sober_alias_service_implementation_library ()
+    sober_end_service_definition ()
+sober_end_service ()

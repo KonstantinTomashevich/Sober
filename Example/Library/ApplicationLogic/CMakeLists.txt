@@ -1,0 +1,15 @@
+sober_begin_library (ApplicationLogic)
+    file (GLOB_RECURSE SOURCES *.cpp)
+    file (GLOB_RECURSE HEADERS *.hpp)
+    add_library (${SOBER_LIBRARY_BASE_TARGET_NAME} STATIC ${HEADERS} ${SOURCES})
+
+    sober_begin_link_variant (Production)
+        sober_link_service (Display ConsoleASCII)
+        sober_link_service (Persistence Binary)
+    sober_end_link_variant ()
+
+    sober_begin_link_variant (Test)
+        sober_link_service (Display TestStub FROZEN)
+        sober_link_service (Persistence TestStub FROZEN)
+    sober_end_link_variant ()
+sober_end_library ()
