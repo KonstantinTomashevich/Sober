@@ -7,4 +7,4 @@ file (GLOB_RECURSE HEADERS *.hpp)
 
 add_library (${TARGET_NAME} STATIC ${HEADERS} ${SOURCES})
 target_link_libraries (${TARGET_NAME} DisplayTestStub)
-
+sober_keep_global_constants ()

@@ -1,4 +1,5 @@
 include_guard (GLOBAL)
+set (SOBER_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
 # TODO: Is constant good term? CMake allows changing any variable.
 unset (SOBER_GLOBAL_CONSTANTS)
 

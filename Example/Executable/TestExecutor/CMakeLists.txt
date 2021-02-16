@@ -3,3 +3,4 @@ file (GLOB_RECURSE HEADERS *.hpp)
 
 add_executable (TestExecutor ${HEADERS} ${SOURCES})
 target_link_libraries (TestExecutor ApplicationLogicTest)
+sober_keep_global_constants ()
