@@ -1,0 +1,10 @@
+sober_begin_library (TestStubPersistence STATIC)
+    file (GLOB_RECURSE SOURCES *.cpp)
+    file (GLOB_RECURSE HEADERS *.hpp)
+    list (APPEND SOURCES ${HEADERS})
+    sober_set_library_sources ("${SOURCES}")
+
+    sober_begin_variant (Original)
+    sober_end_variant ()
+sober_end_library ()
+sober_keep_global_constants ()
