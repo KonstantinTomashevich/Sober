@@ -66,6 +66,7 @@ macro (sober_freeze_service_implementation SERVICE_NAME CONSTANT_IMPLEMENTATION)
     set (${SOBER_LIBRARY_NAME}${SOBER_VARIANT_NAME}_${SERVICE_NAME}_SELECTED_IMPLEMENTATION ${CONSTANT_IMPLEMENTATION})
 endmacro ()
 
+# TODO: Use functions instead of macros where possible?
 macro (sober_end_variant)
     foreach (SERVICE_NAME IN LISTS SOBER_USED_SERVICES)
         if (NOT ${SOBER_LIBRARY_NAME}${SOBER_VARIANT_NAME}_${SERVICE_NAME}_SELECTED_IMPLEMENTATION)
@@ -83,45 +84,22 @@ macro (sober_end_variant)
             message (SEND_ERROR
                      "Sober: service \"${SERVICE_NAME}\" implementation \"${SERVICE_IMPLEMENTATION}\" not found!")
         endif ()
-
-        unset (SERVICE_IMPLEMENTATION)
     endforeach ()
 
+    set (TARGET_NAME "${SOBER_LIBRARY_NAME}${SOBER_VARIANT_NAME}")
     if (SOBER_UNABLE_TO_USE_LINK_VARIANTS)
-        add_library ("${SOBER_LIBRARY_NAME}${SOBER_VARIANT_NAME}" ${SOBER_LIBRARY_TYPE} ${SOBER_LIBRARY_SOURCES})
-        foreach (SERVICE_NAME IN LISTS SOBER_USED_SERVICES)
-            # TODO: Ability to select include type (INTERFACE, PUBLIC, PRIVATE)?
-            target_include_directories ("${SOBER_LIBRARY_NAME}${SOBER_VARIANT_NAME}"
-                                        PUBLIC ${SOBER_${SERVICE_NAME}_INCLUDE_DIRECTORIES})
-
-            set (SERVICE_IMPLEMENTATION
-                 "${${SOBER_LIBRARY_NAME}${SOBER_VARIANT_NAME}_${SERVICE_NAME}_SELECTED_IMPLEMENTATION}")
-
-            target_include_directories ("${SOBER_LIBRARY_NAME}${SOBER_VARIANT_NAME}"
-                                        PUBLIC "SOBER_${SERVICE_NAME}${SERVICE_IMPLEMENTATION}_INCLUDE_DIRECTORIES")
-
-            target_link_libraries ("${SOBER_LIBRARY_NAME}${SOBER_VARIANT_NAME}"
-                                   "${SERVICE_NAME}${SERVICE_IMPLEMENTATION}")
-
-            unset (SERVICE_IMPLEMENTATION)
-        endforeach ()
+        add_library (${TARGET_NAME} ${SOBER_LIBRARY_TYPE} ${SOBER_LIBRARY_SOURCES})
     else ()
-        add_library ("${SOBER_LIBRARY_NAME}${SOBER_VARIANT_NAME}" ${SOBER_LIBRARY_TYPE} "${SOBER_DIRECTORY}/Stub.cpp")
-        target_link_libraries ("${SOBER_LIBRARY_NAME}${SOBER_VARIANT_NAME}"
-                               "${SOBER_LIBRARY_NAME}${SOBER_BASE_LIBRARY_SUFFIX}")
-
-        foreach (SERVICE_NAME IN LISTS SOBER_USED_SERVICES)
-            # TODO: Duplication with libraries to link addition in include-variant target generation?
-            set (SERVICE_IMPLEMENTATION
-                 "${${SOBER_LIBRARY_NAME}${SOBER_VARIANT_NAME}_${SERVICE_NAME}_SELECTED_IMPLEMENTATION}")
-
-            target_link_libraries (
-                    "${SOBER_LIBRARY_NAME}${SOBER_VARIANT_NAME}"
-                    "${SERVICE_NAME}${SERVICE_IMPLEMENTATION}")
-
-            unset (SERVICE_IMPLEMENTATION)
-        endforeach ()
+        add_library (${TARGET_NAME} ${SOBER_LIBRARY_TYPE} "${SOBER_DIRECTORY}/Stub.cpp")
+        target_link_libraries (${TARGET_NAME} "${SOBER_LIBRARY_NAME}${SOBER_BASE_LIBRARY_SUFFIX}")
     endif ()
+
+    foreach (SERVICE_NAME IN LISTS SOBER_USED_SERVICES)
+        set (SERVICE_IMPLEMENTATION
+                "${${SOBER_LIBRARY_NAME}${SOBER_VARIANT_NAME}_${SERVICE_NAME}_SELECTED_IMPLEMENTATION}")
+
+        target_link_libraries (${TARGET_NAME} "${SERVICE_NAME}${SERVICE_IMPLEMENTATION}")
+    endforeach ()
 
     message (STATUS "    Variant \"${SOBER_VARIANT_NAME}\" configuration finished.")
 endmacro ()
@@ -141,7 +119,7 @@ macro (sober_end_library)
                      ${SOBER_LIBRARY_TYPE} ${SOBER_LIBRARY_SOURCES})
 
         foreach (SERVICE_NAME IN LISTS SOBER_USED_SERVICES)
-            # TODO: Ability to select include type (INTERFACE, PUBLIC, PRIVATE)?
+            # TODO: Ability to select api include type (INTERFACE, PUBLIC, PRIVATE)?
             target_include_directories ("${SOBER_LIBRARY_NAME}${SOBER_BASE_LIBRARY_SUFFIX}"
                                         PUBLIC ${SOBER_${SERVICE_NAME}_INCLUDE_DIRECTORIES})
         endforeach ()
