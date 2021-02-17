@@ -12,6 +12,10 @@ macro (sober_begin_library LIBRARY_NAME LIBRARY_TYPE)
     unset (SOBER_USED_SERVICES)
     unset (SOBER_LIBRARY_SOURCES)
     unset (SOBER_UNABLE_TO_USE_LINK_VARIANTS)
+
+    unset (SOBER_LIBRARY_PUBLIC_INCLUDES)
+    unset (SOBER_LIBRARY_PRIVATE_INCLUDES)
+    unset (SOBER_LIBRARY_INTERFACE_INCLUDES)
     unset (SOBER_LIBRARY_CONFIGURATION_DONE)
 endmacro ()
 
@@ -45,6 +49,21 @@ macro (sober_set_library_sources LIBRARY_SOURCES)
     set (SOBER_LIBRARY_SOURCES ${LIBRARY_SOURCES})
 endmacro ()
 
+macro (sober_add_library_include_directories INCLUDE_SCOPE INCLUDE_DIRECTORIES)
+    if (SOBER_LIBRARY_CONFIGURATION_DONE)
+        message (SEND_ERROR "Sober: caught attempt to add library include directories after variants registrations!")
+    endif ()
+
+    if (${INCLUDE_SCOPE} STREQUAL "PUBLIC" OR
+        ${INCLUDE_SCOPE} STREQUAL "PRIVATE" OR
+        ${INCLUDE_SCOPE} STREQUAL "INTERFACE")
+
+        list (APPEND SOBER_LIBRARY_${INCLUDE_SCOPE}_INCLUDES ${INCLUDE_DIRECTORIES})
+    else ()
+        message (SEND_ERROR "Sober: caught unknown include scope \"${INCLUDE_SCOPE}\"!")
+    endif ()
+endmacro ()
+
 macro (sober_begin_variant VARIANT_NAME)
     if (VARIANT_NAME STREQUAL SOBER_BASE_LIBRARY_SUFFIX)
         message (FATAL_ERROR "Sober: can not use variant name \"${VARIANT_NAME}\", because it's reserved suffix!")
@@ -64,6 +83,12 @@ endmacro ()
 macro (sober_freeze_service_implementation SERVICE_NAME CONSTANT_IMPLEMENTATION)
     # TODO: Check is service used?
     set (${SOBER_LIBRARY_NAME}${SOBER_VARIANT_NAME}_${SERVICE_NAME}_SELECTED_IMPLEMENTATION ${CONSTANT_IMPLEMENTATION})
+endmacro ()
+
+macro (sober_add_base_library_includes TARGET_NAME)
+    target_include_directories ("${TARGET_NAME}" PUBLIC ${SOBER_LIBRARY_PUBLIC_INCLUDES})
+    target_include_directories ("${TARGET_NAME}" PRIVATE ${SOBER_LIBRARY_PRIVATE_INCLUDES})
+    target_include_directories ("${TARGET_NAME}" INTERFACE ${SOBER_LIBRARY_INTERFACE_INCLUDES})
 endmacro ()
 
 # TODO: Use functions instead of macros where possible?
@@ -89,6 +114,7 @@ macro (sober_end_variant)
     set (TARGET_NAME "${SOBER_LIBRARY_NAME}${SOBER_VARIANT_NAME}")
     if (SOBER_UNABLE_TO_USE_LINK_VARIANTS)
         add_library (${TARGET_NAME} ${SOBER_LIBRARY_TYPE} ${SOBER_LIBRARY_SOURCES})
+        sober_add_base_library_includes (${TARGET_NAME})
     else ()
         add_library (${TARGET_NAME} ${SOBER_LIBRARY_TYPE} "${SOBER_DIRECTORY}/Stub.cpp")
         target_link_libraries (${TARGET_NAME} "${SOBER_LIBRARY_NAME}${SOBER_BASE_LIBRARY_SUFFIX}")
@@ -117,6 +143,7 @@ macro (sober_end_library)
     else ()
         add_library ("${SOBER_LIBRARY_NAME}${SOBER_BASE_LIBRARY_SUFFIX}"
                      ${SOBER_LIBRARY_TYPE} ${SOBER_LIBRARY_SOURCES})
+        sober_add_base_library_includes ("${SOBER_LIBRARY_NAME}${SOBER_BASE_LIBRARY_SUFFIX}")
 
         foreach (SERVICE_NAME IN LISTS SOBER_USED_SERVICES)
             # TODO: Ability to select api include type (INTERFACE, PUBLIC, PRIVATE)?
