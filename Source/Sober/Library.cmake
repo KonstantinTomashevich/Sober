@@ -24,7 +24,7 @@ macro (sober_use_service SERVICE_NAME)
         message (SEND_ERROR "Sober: caught attempt to add service usage after variants registrations!")
     endif ()
 
-    if (NOT SOBER_${SERVICE_NAME}_FOUND)
+    if (NOT TARGET ${SERVICE_NAME})
         message (FATAL_ERROR "Sober: service \"${SERVICE_NAME}\" is not found!")
     endif ()
 

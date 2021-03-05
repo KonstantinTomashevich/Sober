@@ -66,8 +66,6 @@ macro (sober_end_service)
         sober_make_variable_global_constant (SOBER_${SOBER_SERVICE_NAME}_USES_IMPLEMENTATION_HEADERS)
     endif ()
 
-    set (SOBER_${SOBER_SERVICE_NAME}_FOUND TRUE)
-    sober_make_variable_global_constant (SOBER_${SOBER_SERVICE_NAME}_FOUND)
     message (STATUS "Service \"${SOBER_SERVICE_NAME}\" configuration finished.")
 endmacro ()
 
