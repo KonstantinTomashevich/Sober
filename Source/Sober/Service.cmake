@@ -4,21 +4,21 @@ include (${CMAKE_CURRENT_LIST_DIR}/Utility.cmake)
 macro (sober_begin_service SERVICE_NAME)
     message (STATUS "Service \"${SERVICE_NAME}\" configuration started.")
     set (SOBER_SERVICE_NAME "${SERVICE_NAME}")
+    add_library (${SERVICE_NAME} INTERFACE)
 
-    unset (SOBER_SERVICE_INCLUDE_DIRECTORIES)
     unset (SOBER_SERVICES_USES_IMPLEMENTATION_HEADERS)
     unset (SOBER_SERVICE_CONFIGURATION_DONE)
     unset (SOBER_SERVICE_DEFAULT_IMPLEMENTATION_SELECTED)
 endmacro ()
 
-macro (sober_set_service_include_directories INCLUDE_DIRECTORIES)
+macro (sober_add_service_include_directory INCLUDE_DIRECTORY)
     if (SOBER_SERVICE_CONFIGURATION_DONE)
         message (SEND_ERROR "Sober: caught attempt to add service include \
                              directory after implementation registrations!")
     endif ()
 
-    message (STATUS "    Include directories: \"${INCLUDE_DIRECTORIES}\".")
-    set (SOBER_SERVICE_INCLUDE_DIRECTORIES "${INCLUDE_DIRECTORIES}")
+    message (STATUS "    Adding include directory: \"${INCLUDE_DIRECTORY}\".")
+    target_include_directories (${SOBER_SERVICE_NAME} INTERFACE "${INCLUDE_DIRECTORY}")
 endmacro ()
 
 macro (sober_add_implementation_headers_requirement)
@@ -35,9 +35,7 @@ macro (sober_add_service_implementation IMPLEMENTATION_DIRECTORY)
     message (STATUS "    Adding implementation from \"${IMPLEMENTATION_DIRECTORY}\".")
     set (SOBER_SERVICE_CONFIGURATION_DONE TRUE)
     add_subdirectory (${IMPLEMENTATION_DIRECTORY})
-
-    target_include_directories (${SOBER_SERVICE_NAME}${SOBER_SERVICE_IMPLEMENTATION_NAME}
-                                PUBLIC ${SOBER_SERVICE_INCLUDE_DIRECTORIES})
+    target_link_libraries ("${SOBER_SERVICE_NAME}${SOBER_SERVICE_IMPLEMENTATION_NAME}" PUBLIC ${SOBER_SERVICE_NAME})
 endmacro ()
 
 macro (sober_add_default_service_implementation IMPLEMENTATION_DIRECTORY)
@@ -67,9 +65,6 @@ macro (sober_end_service)
         set (SOBER_${SOBER_SERVICE_NAME}_USES_IMPLEMENTATION_HEADERS TRUE)
         sober_make_variable_global_constant (SOBER_${SOBER_SERVICE_NAME}_USES_IMPLEMENTATION_HEADERS)
     endif ()
-
-    set (SOBER_${SOBER_SERVICE_NAME}_INCLUDE_DIRECTORIES ${SOBER_SERVICE_INCLUDE_DIRECTORIES})
-    sober_make_variable_global_constant (SOBER_${SOBER_SERVICE_NAME}_INCLUDE_DIRECTORIES)
 
     set (SOBER_${SOBER_SERVICE_NAME}_FOUND TRUE)
     sober_make_variable_global_constant (SOBER_${SOBER_SERVICE_NAME}_FOUND)

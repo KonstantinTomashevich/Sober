@@ -6,5 +6,5 @@ file (GLOB_RECURSE HEADERS *.hpp)
 
 add_library (${TARGET_NAME} STATIC ${HEADERS} ${SOURCES})
 target_include_directories (${TARGET_NAME} ${SOBER_IMPLEMENTATION_INCLUDES_SCOPE} ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries (${TARGET_NAME} BinaryPersistenceOriginal)
+target_link_libraries (${TARGET_NAME} PRIVATE BinaryPersistenceOriginal)
 sober_keep_global_constants ()

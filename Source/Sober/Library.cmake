@@ -115,16 +115,18 @@ macro (sober_end_variant)
     if (SOBER_UNABLE_TO_USE_LINK_VARIANTS)
         add_library (${TARGET_NAME} ${SOBER_LIBRARY_TYPE} ${SOBER_LIBRARY_SOURCES})
         sober_add_base_library_includes (${TARGET_NAME})
+        # TODO: Ability to select api include type (INTERFACE, PUBLIC, PRIVATE)?
+        set (SERVICE_LINK_TYPE PUBLIC)
     else ()
-        add_library (${TARGET_NAME} ${SOBER_LIBRARY_TYPE} "${SOBER_DIRECTORY}/Stub.cpp")
-        target_link_libraries (${TARGET_NAME} "${SOBER_LIBRARY_NAME}${SOBER_BASE_LIBRARY_SUFFIX}")
+        add_library (${TARGET_NAME} INTERFACE)
+        set (SERVICE_LINK_TYPE INTERFACE)
+        target_link_libraries (${TARGET_NAME} ${SERVICE_LINK_TYPE} "${SOBER_LIBRARY_NAME}${SOBER_BASE_LIBRARY_SUFFIX}")
     endif ()
 
     foreach (SERVICE_NAME IN LISTS SOBER_USED_SERVICES)
         set (SERVICE_IMPLEMENTATION
                 "${${SOBER_LIBRARY_NAME}${SOBER_VARIANT_NAME}_${SERVICE_NAME}_SELECTED_IMPLEMENTATION}")
-
-        target_link_libraries (${TARGET_NAME} "${SERVICE_NAME}${SERVICE_IMPLEMENTATION}")
+        target_link_libraries (${TARGET_NAME} ${SERVICE_LINK_TYPE} "${SERVICE_NAME}${SERVICE_IMPLEMENTATION}")
     endforeach ()
 
     message (STATUS "    Variant \"${SOBER_VARIANT_NAME}\" configuration finished.")
@@ -147,8 +149,7 @@ macro (sober_end_library)
 
         foreach (SERVICE_NAME IN LISTS SOBER_USED_SERVICES)
             # TODO: Ability to select api include type (INTERFACE, PUBLIC, PRIVATE)?
-            target_include_directories ("${SOBER_LIBRARY_NAME}${SOBER_BASE_LIBRARY_SUFFIX}"
-                                        PUBLIC ${SOBER_${SERVICE_NAME}_INCLUDE_DIRECTORIES})
+            target_link_libraries ("${SOBER_LIBRARY_NAME}${SOBER_BASE_LIBRARY_SUFFIX}" PUBLIC ${SERVICE_NAME})
         endforeach ()
     endif ()
 
