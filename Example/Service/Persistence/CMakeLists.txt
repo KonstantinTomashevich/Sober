@@ -6,5 +6,3 @@ sober_begin_service (Persistence)
     sober_add_service_implementation ("${CMAKE_CURRENT_SOURCE_DIR}/Implementation/PlainText")
     sober_add_service_implementation ("${CMAKE_CURRENT_SOURCE_DIR}/Implementation/TestStub")
 sober_end_service ()
-
-sober_keep_global_constants ()
