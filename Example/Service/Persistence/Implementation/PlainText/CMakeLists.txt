@@ -1,9 +1,9 @@
-sober_set_service_implementation_name (PlainText)
-set (TARGET_NAME ${SOBER_SERVICE_IMPLEMENTATION_TARGET_NAME})
+sober_begin_implementation (PlainText)
+    file (GLOB_RECURSE SOURCES *.cpp)
+    file (GLOB_RECURSE HEADERS *.hpp)
+    list (APPEND SOURCES ${HEADERS})
 
-file (GLOB_RECURSE SOURCES *.cpp)
-file (GLOB_RECURSE HEADERS *.hpp)
-
-add_library (${TARGET_NAME} STATIC ${HEADERS} ${SOURCES})
-target_include_directories (${TARGET_NAME} ${SOBER_IMPLEMENTATION_INCLUDES_SCOPE} ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries (${TARGET_NAME} PRIVATE PlainTextPersistenceOriginal)
+    sober_setup_service_implementation_target (STATIC "${SOURCES}")
+    sober_implementation_include_directory (${CMAKE_CURRENT_SOURCE_DIR})
+    sober_implementation_link_library (PlainTextPersistenceOriginal)
+sober_end_implementation ()

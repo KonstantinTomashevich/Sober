@@ -46,7 +46,6 @@ macro (sober_add_service_implementation IMPLEMENTATION_DIRECTORY)
     message (STATUS "    Adding implementation from \"${IMPLEMENTATION_DIRECTORY}\".")
     set (SOBER_IMPLEMENTATION_REGISTRATION_STARTED TRUE)
     add_subdirectory (${IMPLEMENTATION_DIRECTORY})
-    target_link_libraries ("${SOBER_SERVICE_NAME}${SOBER_SERVICE_IMPLEMENTATION_NAME}" PUBLIC ${SOBER_SERVICE_NAME})
 endmacro ()
 
 function (set_default_service_implementation IMPLEMENTATION_NAME)
@@ -83,10 +82,16 @@ macro (sober_end_service)
     endif ()
 
     message (STATUS "Service \"${SOBER_SERVICE_NAME}\" configuration finished.")
+    unset (SOBER_SERVICE_NAME)
 endmacro ()
 
-macro (sober_set_service_implementation_name SERVICE_IMPLEMENTATION_NAME)
-    message (STATUS "        Implementation name is \"${SERVICE_IMPLEMENTATION_NAME}\".")
+macro (sober_begin_implementation IMPLEMENTATION_NAME)
+    message (STATUS "        Implementation \"${IMPLEMENTATION_NAME}\" configuration started.")
+    if (NOT SOBER_SERVICE_NAME)
+        message (FATAL_ERROR "Sober: sober_begin_implementation called outside of service definition!")
+    endif ()
+
+    set (SOBER_IMPLEMENTATION_NAME ${IMPLEMENTATION_NAME})
     get_property (SOBER_INTERFACE_USES_IMPLEMENTATION_HEADERS
                   TARGET ${SOBER_SERVICE_NAME} PROPERTY INTERFACE_USES_IMPLEMENTATION_HEADERS)
 
@@ -101,4 +106,48 @@ macro (sober_set_service_implementation_name SERVICE_IMPLEMENTATION_NAME)
 
     set (SOBER_SERVICE_IMPLEMENTATION_TARGET_NAME ${SOBER_SERVICE_NAME}${SOBER_SERVICE_IMPLEMENTATION_NAME})
     message (STATUS "        Implementation target name is \"${SOBER_SERVICE_IMPLEMENTATION_TARGET_NAME}\".")
+endmacro ()
+
+macro (sober_setup_service_implementation_target LIBRARY_TYPE LIBRARY_SOURCES)
+    message (STATUS "           Adding implementation library \"${SOBER_SERVICE_NAME}${SOBER_IMPLEMENTATION_NAME}\".")
+    message (STATUS "           Library type is \"${LIBRARY_TYPE}\".")
+    add_library ("${SOBER_SERVICE_NAME}${SOBER_IMPLEMENTATION_NAME}" ${LIBRARY_TYPE} ${LIBRARY_SOURCES})
+endmacro ()
+
+macro (sober_implementation_include_directory DIRECTORY)
+    get_property (SOBER_INTERFACE_USES_IMPLEMENTATION_HEADERS 
+                  TARGET ${SOBER_SERVICE_NAME} PROPERTY INTERFACE_USES_IMPLEMENTATION_HEADERS)
+
+    if (SOBER_INTERFACE_USES_IMPLEMENTATION_HEADERS)
+        set (SOBER_IMPLEMENTATION_INCLUDES_SCOPE "PUBLIC")
+    else ()
+        set (SOBER_IMPLEMENTATION_INCLUDES_SCOPE "PRIVATE")
+    endif ()
+
+    message (STATUS 
+             "           Including directory \"${DIRECTORY}\" to \"${SOBER_IMPLEMENTATION_INCLUDES_SCOPE}\" scope.")
+    target_include_directories ("${SOBER_SERVICE_NAME}${SOBER_IMPLEMENTATION_NAME}" 
+                                ${SOBER_IMPLEMENTATION_INCLUDES_SCOPE} ${DIRECTORY})
+endmacro ()
+
+macro (sober_implementation_link_library LIBRARY)
+    get_property (SOBER_INTERFACE_USES_IMPLEMENTATION_HEADERS 
+                  TARGET ${SOBER_SERVICE_NAME} PROPERTY INTERFACE_USES_IMPLEMENTATION_HEADERS)
+
+    if (SOBER_INTERFACE_USES_IMPLEMENTATION_HEADERS)
+        set (SOBER_IMPLEMENTATION_INCLUDES_SCOPE "PUBLIC")
+    else ()
+        set (SOBER_IMPLEMENTATION_INCLUDES_SCOPE "PRIVATE")
+    endif ()
+
+    message (STATUS 
+             "           Linking library \"${LIBRARY}\" to \"${SOBER_IMPLEMENTATION_INCLUDES_SCOPE}\" scope.")
+    target_link_libraries ("${SOBER_SERVICE_NAME}${SOBER_IMPLEMENTATION_NAME}" 
+                           ${SOBER_IMPLEMENTATION_INCLUDES_SCOPE} ${LIBRARY})
+endmacro ()
+
+macro (sober_end_implementation)
+    target_link_libraries ("${SOBER_SERVICE_NAME}${SOBER_IMPLEMENTATION_NAME}" PUBLIC ${SOBER_SERVICE_NAME})
+    message (STATUS "        Implementation \"${SOBER_IMPLEMENTATION_NAME}\" configuration started.")
+    unset (SOBER_IMPLEMENTATION_NAME)
 endmacro ()
