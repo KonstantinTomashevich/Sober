@@ -22,6 +22,10 @@ function (sober_library_begin LIBRARY_NAME LIBRARY_TYPE)
     unset (SOBER_LIBRARY_PUBLIC_INCLUDES PARENT_SCOPE)
     unset (SOBER_LIBRARY_PRIVATE_INCLUDES PARENT_SCOPE)
     unset (SOBER_LIBRARY_INTERFACE_INCLUDES PARENT_SCOPE)
+
+    unset (SOBER_LIBRARY_PUBLIC_LINK_LIBRARIES PARENT_SCOPE)
+    unset (SOBER_LIBRARY_PRIVATE_LINK_LIBRARIES PARENT_SCOPE)
+    unset (SOBER_LIBRARY_INTERFACE_LINK_LIBRARIES PARENT_SCOPE)
     unset (SOBER_VARIANT_CONFIGURATION_STARTED PARENT_SCOPE)
 endfunction ()
 
@@ -61,7 +65,7 @@ function (sober_library_use_service SERVICE_NAME USAGE_SCOPE)
                 "${SOBER_LIBRARY_NAME}" "${SERVICE_NAME}" SCOPE_VARIABLE_NAME)
 
         set ("${SCOPE_VARIABLE_NAME}" "${USAGE_SCOPE}" PARENT_SCOPE)
-        message (STATUS "    Uses service \"${SERVICE_NAME}\" within \"${USAGE_SCOPE}\" scope.")
+        message (STATUS "    Using service \"${SERVICE_NAME}\" within \"${USAGE_SCOPE}\" scope.")
     else ()
         message (WARNING "Sober: service \"${SERVICE_NAME}\" is already used by library \"${SOBER_LIBRARY_NAME}\"!")
     endif ()
@@ -86,10 +90,29 @@ function (sober_library_include_directory INCLUDE_SCOPE INCLUDE_DIRECTORY)
         "${INCLUDE_SCOPE}" STREQUAL "PRIVATE" OR
         "${INCLUDE_SCOPE}" STREQUAL "INTERFACE")
 
+        message (STATUS "    Including directory \"${INCLUDE_DIRECTORY}\" to \"${INCLUDE_SCOPE}\" scope.")
         list (APPEND "SOBER_LIBRARY_${INCLUDE_SCOPE}_INCLUDES" "${INCLUDE_DIRECTORY}")
         set ("SOBER_LIBRARY_${INCLUDE_SCOPE}_INCLUDES" ${SOBER_LIBRARY_${INCLUDE_SCOPE}_INCLUDES} PARENT_SCOPE)
     else ()
         message (SEND_ERROR "Sober: caught unknown include scope \"${INCLUDE_SCOPE}\"!")
+    endif ()
+endfunction ()
+
+function (sober_library_link_library LINK_SCOPE LIBRARY_NAME)
+    if (SOBER_VARIANT_CONFIGURATION_STARTED)
+        message (SEND_ERROR "Sober: caught attempt to add library link dependency after variants configuration!")
+        return ()
+    endif ()
+
+    if ("${LINK_SCOPE}" STREQUAL "PUBLIC" OR
+        "${LINK_SCOPE}" STREQUAL "PRIVATE" OR
+        "${LINK_SCOPE}" STREQUAL "INTERFACE")
+
+        message (STATUS "    Linking library \"${LIBRARY_NAME}\" to \"${LINK_SCOPE}\" scope.")
+        list (APPEND "SOBER_LIBRARY_${LINK_SCOPE}_LINK_LIBRARIES" "${LIBRARY_NAME}")
+        set ("SOBER_LIBRARY_${LINK_SCOPE}_LINK_LIBRARIES" ${SOBER_LIBRARY_${LINK_SCOPE}_LINK_LIBRARIES} PARENT_SCOPE)
+    else ()
+        message (SEND_ERROR "Sober: caught unknown link scope \"${INCLUDE_SCOPE}\"!")
     endif ()
 endfunction ()
 
@@ -114,10 +137,14 @@ function (sober_variant_freeze_implementation SERVICE_NAME CONSTANT_IMPLEMENTATI
     set ("${VARIABLE}" "${CONSTANT_IMPLEMENTATION}" PARENT_SCOPE)
 endfunction ()
 
-function (sober_internal_library_add_base_includes TARGET)
+function (sober_internal_library_add_base_target_dependencies TARGET)
     target_include_directories ("${TARGET}" PUBLIC ${SOBER_LIBRARY_PUBLIC_INCLUDES})
     target_include_directories ("${TARGET}" PRIVATE ${SOBER_LIBRARY_PRIVATE_INCLUDES})
     target_include_directories ("${TARGET}" INTERFACE ${SOBER_LIBRARY_INTERFACE_INCLUDES})
+
+    target_link_libraries ("${TARGET}" PUBLIC ${SOBER_LIBRARY_PUBLIC_LINK_LIBRARIES})
+    target_link_libraries ("${TARGET}" PRIVATE ${SOBER_LIBRARY_PRIVATE_LINK_LIBRARIES})
+    target_link_libraries ("${TARGET}" INTERFACE ${SOBER_LIBRARY_INTERFACE_LINK_LIBRARIES})
 endfunction ()
 
 function (sober_variant_end)
@@ -136,7 +163,7 @@ function (sober_variant_end)
                 "${SERVICE_NAME}" "${SERVICE_IMPLEMENTATION}" IMPLEMENTATION_TARGET)
 
         if (TARGET "${IMPLEMENTATION_TARGET}")
-            message (STATUS "        \"${SERVICE_NAME}\" implementation: \"${SERVICE_IMPLEMENTATION}\".")
+            message (STATUS "        Using \"${SERVICE_NAME}\" implementation \"${SERVICE_IMPLEMENTATION}\".")
         else ()
             message (SEND_ERROR
                      "Sober: service \"${SERVICE_NAME}\" implementation \"${SERVICE_IMPLEMENTATION}\" not found!")
@@ -145,7 +172,7 @@ function (sober_variant_end)
 
     if (SOBER_UNABLE_TO_USE_LINK_VARIANTS)
         add_library ("${SOBER_VARIANT_TARGET}" "${SOBER_LIBRARY_TYPE}" ${SOBER_LIBRARY_SOURCES})
-        sober_internal_library_add_base_includes ("${SOBER_VARIANT_TARGET}")
+        sober_internal_library_add_base_target_dependencies ("${SOBER_VARIANT_TARGET}")
     else ()
         add_library ("${SOBER_VARIANT_TARGET}" INTERFACE)
         sober_internal_get_library_base_target_name ("${SOBER_LIBRARY_NAME}" BASE_LIBRARY_TARGET)
@@ -194,13 +221,13 @@ function (sober_library_end)
                           PROPERTY INTERFACE_USES_IMPLEMENTATION_HEADERS)
 
             if (USES_IMPLEMENTATION_HEADERS)
-                message (STATUS "        ${SERVICE_NAME}")
+                message (STATUS "        - ${SERVICE_NAME}")
             endif ()
         endforeach ()
     else ()
         sober_internal_get_library_base_target_name ("${SOBER_LIBRARY_NAME}" BASE_LIBRARY_TARGET)
         add_library ("${BASE_LIBRARY_TARGET}" "${SOBER_LIBRARY_TYPE}" "${SOBER_LIBRARY_SOURCES}")
-        sober_internal_library_add_base_includes ("${BASE_LIBRARY_TARGET}")
+        sober_internal_library_add_base_target_dependencies ("${BASE_LIBRARY_TARGET}")
 
         foreach (SERVICE_NAME IN LISTS SOBER_USED_SERVICES)
             sober_internal_get_service_usage_scope_variable_name (
