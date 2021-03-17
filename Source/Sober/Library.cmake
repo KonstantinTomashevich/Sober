@@ -80,12 +80,15 @@ function (sober_variant_begin VARIANT_NAME)
 endfunction ()
 
 function (sober_variant_set_default_implementation SERVICE_NAME DEFAULT_IMPLEMENTATION)
-    set (SOBER_${SOBER_VARIANT_TARGET}_${SERVICE_NAME}_SELECTED_IMPLEMENTATION
-         ${DEFAULT_IMPLEMENTATION} CACHE STRING)
+    sober_internal_get_selected_implementation_variable_name  (
+            "${SOBER_LIBRARY_NAME}" "${SOBER_VARIANT_NAME}" "${SERVICE_NAME}" VARIABLE)
+    set ("${VARIABLE}" "${DEFAULT_IMPLEMENTATION}" CACHE STRING)
 endfunction ()
 
 function (sober_variant_freeze_implementation SERVICE_NAME CONSTANT_IMPLEMENTATION)
-    set (SOBER_${SOBER_VARIANT_TARGET}_${SERVICE_NAME}_SELECTED_IMPLEMENTATION ${CONSTANT_IMPLEMENTATION})
+    sober_internal_get_selected_implementation_variable_name  (
+            "${SOBER_LIBRARY_NAME}" "${SOBER_VARIANT_NAME}" "${SERVICE_NAME}" VARIABLE)
+    set ("${VARIABLE}" "${CONSTANT_IMPLEMENTATION}" PARENT_SCOPE)
 endfunction ()
 
 function (sober_library_internal_add_base_includes TARGET)
@@ -96,13 +99,16 @@ endfunction ()
 
 function (sober_variant_end)
     foreach (SERVICE_NAME IN LISTS SOBER_USED_SERVICES)
-        if (NOT DEFINED SOBER_${SOBER_VARIANT_TARGET}_${SERVICE_NAME}_SELECTED_IMPLEMENTATION)
+        sober_internal_get_selected_implementation_variable_name  (
+                "${SOBER_LIBRARY_NAME}" "${SOBER_VARIANT_NAME}" "${SERVICE_NAME}" IMPLEMENTATION_VARIABLE_NAME)
+
+        if (NOT DEFINED "${IMPLEMENTATION_VARIABLE_NAME}")
             sober_internal_get_service_target_name ("${SERVICE_NAME}" SERVICE_TARGET)
             get_property (IMPLEMENTATION TARGET ${SERVICE_TARGET} PROPERTY INTERFACE_SERVICE_DEFAULT_IMPLEMENTATION)
-            set (SOBER_${SOBER_VARIANT_TARGET}_${SERVICE_NAME}_SELECTED_IMPLEMENTATION ${IMPLEMENTATION})
+            set ("${IMPLEMENTATION_VARIABLE_NAME}" ${IMPLEMENTATION})
         endif ()
 
-        set (SERVICE_IMPLEMENTATION "${SOBER_${SOBER_VARIANT_TARGET}_${SERVICE_NAME}_SELECTED_IMPLEMENTATION}")
+        set (SERVICE_IMPLEMENTATION "${${IMPLEMENTATION_VARIABLE_NAME}}")
         sober_internal_get_implementation_target_name (
                 "${SERVICE_NAME}" "${SERVICE_IMPLEMENTATION}" IMPLEMENTATION_TARGET)
 
@@ -128,9 +134,12 @@ function (sober_variant_end)
     endif ()
 
     foreach (SERVICE_NAME IN LISTS SOBER_USED_SERVICES)
+        sober_internal_get_selected_implementation_variable_name  (
+                "${SOBER_LIBRARY_NAME}" "${SOBER_VARIANT_NAME}" "${SERVICE_NAME}" IMPLEMENTATION_VARIABLE_NAME)
+
         sober_internal_get_implementation_target_name (
-                "${SERVICE_NAME}" "${SOBER_${SOBER_VARIANT_TARGET}_${SERVICE_NAME}_SELECTED_IMPLEMENTATION}"
-                IMPLEMENTATION_TARGET)
+                "${SERVICE_NAME}" "${${IMPLEMENTATION_VARIABLE_NAME}}" IMPLEMENTATION_TARGET)
+
         target_link_libraries (${SOBER_VARIANT_TARGET} ${SERVICE_LINK_TYPE} "${IMPLEMENTATION_TARGET}")
     endforeach ()
 
