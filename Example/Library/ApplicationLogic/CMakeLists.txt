@@ -1,6 +1,6 @@
 sober_library_begin (ApplicationLogic STATIC)
-    sober_library_use_service (Display)
-    sober_library_use_service (Persistence)
+    sober_library_use_service (Display PRIVATE)
+    sober_library_use_service (Persistence PRIVATE)
 
     file (GLOB_RECURSE SOURCES *.cpp)
     file (GLOB_RECURSE HEADERS *.hpp)

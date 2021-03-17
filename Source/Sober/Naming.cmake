@@ -21,11 +21,21 @@ function (sober_internal_get_variant_target_name LIBRARY_NAME VARIANT_NAME OUTPU
     set ("${OUTPUT_VARIABLE}" "${LIBRARY_NAME}${VARIANT_NAME}" PARENT_SCOPE)
 endfunction ()
 
-function (sober_internal_get_variant_variable_name LIBRARY_NAME VARIANT_NAME VARIABLE_NAME OUTPUT_VARIABLE)
-    set ("${OUTPUT_VARIABLE}" "SOBER_${LIBRARY_NAME}_${VARIANT_NAME}_${VARIABLE_NAME}" PARENT_SCOPE)
+function (sober_internal_get_library_variable_name LIBRARY_NAME VARIABLE_NAME OUTPUT_VARIABLE)
+    set ("${OUTPUT_VARIABLE}" "SOBER_${LIBRARY_NAME}_${VARIABLE_NAME}" PARENT_SCOPE)
 endfunction ()
 
-function (sober_internal_get_selected_implementation_variable_name 
+function (sober_internal_get_service_usage_scope_variable_name LIBRARY_NAME SERVICE_NAME OUTPUT_VARIABLE)
+    sober_internal_get_library_variable_name ("${LIBRARY_NAME}" "${SERVICE_NAME}_SCOPE" "${OUTPUT_VARIABLE}")
+    set ("${OUTPUT_VARIABLE}" "${${OUTPUT_VARIABLE}}" PARENT_SCOPE)
+endfunction ()
+
+function (sober_internal_get_variant_variable_name LIBRARY_NAME VARIANT_NAME VARIABLE_NAME OUTPUT_VARIABLE)
+    sober_internal_get_library_variable_name ("${LIBRARY_NAME}" "${VARIANT_NAME}_${VARIABLE_NAME}" "${OUTPUT_VARIABLE}")
+    set ("${OUTPUT_VARIABLE}" "${${OUTPUT_VARIABLE}}" PARENT_SCOPE)
+endfunction ()
+
+function (sober_internal_get_selected_implementation_variable_name
           LIBRARY_NAME VARIANT_NAME SERVICE_NAME OUTPUT_VARIABLE)
 
     sober_internal_get_variant_variable_name (

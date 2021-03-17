@@ -5,6 +5,13 @@ function (sober_library_begin LIBRARY_NAME LIBRARY_TYPE)
     message (STATUS "Library \"${LIBRARY_NAME}\" configuration started.")
     message (STATUS "    Type: ${LIBRARY_TYPE}.")
 
+    if (NOT "${LIBRARY_TYPE}" STREQUAL "STATIC" AND
+        NOT "${LIBRARY_TYPE}" STREQUAL "SHARED" AND
+        NOT "${LIBRARY_TYPE}" STREQUAL "INTERFACE")
+
+        message (FATAL_ERROR "Sober: library type must be \"STATIC\", \"SHARED\" or \"INTERFACE\"!")
+    endif ()
+
     set (SOBER_LIBRARY_NAME "${LIBRARY_NAME}" PARENT_SCOPE)
     set (SOBER_LIBRARY_TYPE "${LIBRARY_TYPE}" PARENT_SCOPE)
 
@@ -18,14 +25,24 @@ function (sober_library_begin LIBRARY_NAME LIBRARY_TYPE)
     unset (SOBER_VARIANT_CONFIGURATION_STARTED PARENT_SCOPE)
 endfunction ()
 
-function (sober_library_use_service SERVICE_NAME)
+function (sober_library_use_service SERVICE_NAME USAGE_SCOPE)
     if (SOBER_VARIANT_CONFIGURATION_STARTED)
         message (SEND_ERROR "Sober: caught attempt to add service usage after variants configuration!")
+        return ()
+    endif ()
+
+    if (NOT "${USAGE_SCOPE}" STREQUAL "PUBLIC" AND
+        NOT "${USAGE_SCOPE}" STREQUAL "PRIVATE" AND
+        NOT "${USAGE_SCOPE}" STREQUAL "INTERFACE")
+
+        message (SEND_ERROR "Sober: service usage scope must be \"PUBLIC\", \"PRIVATE\" or \"INTERFACE\"!")
+        return ()
     endif ()
 
     sober_internal_get_service_target_name ("${SERVICE_NAME}" SERVICE_TARGET)
     if (NOT TARGET ${SERVICE_TARGET})
-        message (FATAL_ERROR "Sober: service \"${SERVICE_NAME}\" is not found!")
+        message (SEND_ERROR "Sober: service \"${SERVICE_NAME}\" is not found!")
+        return ()
     endif ()
 
     list (FIND SOBER_USED_SERVICES ${SERVICE_NAME} FOUND_INDEX)
@@ -39,7 +56,12 @@ function (sober_library_use_service SERVICE_NAME)
 
         list (APPEND SOBER_USED_SERVICES ${SERVICE_NAME})
         set (SOBER_USED_SERVICES ${SOBER_USED_SERVICES} PARENT_SCOPE)
-        message (STATUS "    Uses service \"${SERVICE_NAME}\".")
+
+        sober_internal_get_service_usage_scope_variable_name (
+                "${SOBER_LIBRARY_NAME}" "${SERVICE_NAME}" SCOPE_VARIABLE_NAME)
+
+        set ("${SCOPE_VARIABLE_NAME}" "${USAGE_SCOPE}" PARENT_SCOPE)
+        message (STATUS "    Uses service \"${SERVICE_NAME}\" within \"${USAGE_SCOPE}\" scope.")
     else ()
         message (WARNING "Sober: service \"${SERVICE_NAME}\" is already used by library \"${SOBER_LIBRARY_NAME}\"!")
     endif ()
@@ -48,6 +70,7 @@ endfunction ()
 function (sober_library_set_sources LIBRARY_SOURCES)
     if (SOBER_VARIANT_CONFIGURATION_STARTED)
         message (SEND_ERROR "Sober: caught attempt to set library sources after variants configuration!")
+        return ()
     endif ()
 
     set (SOBER_LIBRARY_SOURCES ${LIBRARY_SOURCES} PARENT_SCOPE)
@@ -56,6 +79,7 @@ endfunction ()
 function (sober_library_include_directories INCLUDE_SCOPE INCLUDE_DIRECTORIES)
     if (SOBER_VARIANT_CONFIGURATION_STARTED)
         message (SEND_ERROR "Sober: caught attempt to add library include directories after variants configuration!")
+        return ()
     endif ()
 
     if ("${INCLUDE_SCOPE}" STREQUAL "PUBLIC" OR
@@ -80,18 +104,18 @@ function (sober_variant_begin VARIANT_NAME)
 endfunction ()
 
 function (sober_variant_set_default_implementation SERVICE_NAME DEFAULT_IMPLEMENTATION)
-    sober_internal_get_selected_implementation_variable_name  (
+    sober_internal_get_selected_implementation_variable_name (
             "${SOBER_LIBRARY_NAME}" "${SOBER_VARIANT_NAME}" "${SERVICE_NAME}" VARIABLE)
     set ("${VARIABLE}" "${DEFAULT_IMPLEMENTATION}" CACHE STRING)
 endfunction ()
 
 function (sober_variant_freeze_implementation SERVICE_NAME CONSTANT_IMPLEMENTATION)
-    sober_internal_get_selected_implementation_variable_name  (
+    sober_internal_get_selected_implementation_variable_name (
             "${SOBER_LIBRARY_NAME}" "${SOBER_VARIANT_NAME}" "${SERVICE_NAME}" VARIABLE)
     set ("${VARIABLE}" "${CONSTANT_IMPLEMENTATION}" PARENT_SCOPE)
 endfunction ()
 
-function (sober_library_internal_add_base_includes TARGET)
+function (sober_internal_library_add_base_includes TARGET)
     target_include_directories ("${TARGET}" PUBLIC ${SOBER_LIBRARY_PUBLIC_INCLUDES})
     target_include_directories ("${TARGET}" PRIVATE ${SOBER_LIBRARY_PRIVATE_INCLUDES})
     target_include_directories ("${TARGET}" INTERFACE ${SOBER_LIBRARY_INTERFACE_INCLUDES})
@@ -99,7 +123,7 @@ endfunction ()
 
 function (sober_variant_end)
     foreach (SERVICE_NAME IN LISTS SOBER_USED_SERVICES)
-        sober_internal_get_selected_implementation_variable_name  (
+        sober_internal_get_selected_implementation_variable_name (
                 "${SOBER_LIBRARY_NAME}" "${SOBER_VARIANT_NAME}" "${SERVICE_NAME}" IMPLEMENTATION_VARIABLE_NAME)
 
         if (NOT DEFINED "${IMPLEMENTATION_VARIABLE_NAME}")
@@ -112,7 +136,6 @@ function (sober_variant_end)
         sober_internal_get_implementation_target_name (
                 "${SERVICE_NAME}" "${SERVICE_IMPLEMENTATION}" IMPLEMENTATION_TARGET)
 
-        # TODO: Target name convention ServiceName..ServiceImplementation is hardcoded everywhere. Refactor?
         if (TARGET "${IMPLEMENTATION_TARGET}")
             message (STATUS "        \"${SERVICE_NAME}\" implementation: \"${SERVICE_IMPLEMENTATION}\".")
         else ()
@@ -120,27 +143,40 @@ function (sober_variant_end)
                      "Sober: service \"${SERVICE_NAME}\" implementation \"${SERVICE_IMPLEMENTATION}\" not found!")
         endif ()
     endforeach ()
-    
+
     if (SOBER_UNABLE_TO_USE_LINK_VARIANTS)
         add_library ("${SOBER_VARIANT_TARGET}" "${SOBER_LIBRARY_TYPE}" ${SOBER_LIBRARY_SOURCES})
-        sober_library_internal_add_base_includes ("${SOBER_VARIANT_TARGET}")
-        # TODO: Ability to select api include type (INTERFACE, PUBLIC, PRIVATE)?
-        set (SERVICE_LINK_TYPE "PUBLIC")
+        sober_internal_library_add_base_includes ("${SOBER_VARIANT_TARGET}")
     else ()
         add_library ("${SOBER_VARIANT_TARGET}" INTERFACE)
-        set (SERVICE_LINK_TYPE "INTERFACE")
         sober_internal_get_library_base_target_name ("${SOBER_LIBRARY_NAME}" BASE_LIBRARY_TARGET)
-        target_link_libraries ("${SOBER_VARIANT_TARGET}" ${SERVICE_LINK_TYPE} "${BASE_LIBRARY_TARGET}")
+        target_link_libraries ("${SOBER_VARIANT_TARGET}" INTERFACE "${BASE_LIBRARY_TARGET}")
     endif ()
 
     foreach (SERVICE_NAME IN LISTS SOBER_USED_SERVICES)
-        sober_internal_get_selected_implementation_variable_name  (
+        sober_internal_get_selected_implementation_variable_name (
                 "${SOBER_LIBRARY_NAME}" "${SOBER_VARIANT_NAME}" "${SERVICE_NAME}" IMPLEMENTATION_VARIABLE_NAME)
 
         sober_internal_get_implementation_target_name (
                 "${SERVICE_NAME}" "${${IMPLEMENTATION_VARIABLE_NAME}}" IMPLEMENTATION_TARGET)
 
-        target_link_libraries (${SOBER_VARIANT_TARGET} ${SERVICE_LINK_TYPE} "${IMPLEMENTATION_TARGET}")
+        sober_internal_get_service_usage_scope_variable_name (
+                "${SOBER_LIBRARY_NAME}" "${SERVICE_NAME}" SCOPE_VARIABLE_NAME)
+
+        if (SOBER_UNABLE_TO_USE_LINK_VARIANTS)
+            # If variants are configured in link mode, API targets will always be linked as dependencies.
+            # In separate target mode services, that do not require implementation headers, will not provide
+            # API headers (otherwise API headers would always be exposed in link mode), therefore we must
+            # manually link API headers target.
+            sober_internal_get_service_target_name ("${SERVICE_NAME}" SERVICE_TARGET)
+            target_link_libraries ("${SOBER_VARIANT_TARGET}" "${${SCOPE_VARIABLE_NAME}}" ${SERVICE_TARGET})
+
+            set (LINK_TYPE "${${SCOPE_VARIABLE_NAME}}")
+        else ()
+            set (LINK_TYPE INTERFACE)
+        endif ()
+
+        target_link_libraries (${SOBER_VARIANT_TARGET} "${LINK_TYPE}" "${IMPLEMENTATION_TARGET}")
     endforeach ()
 
     message (STATUS "    Variant \"${SOBER_VARIANT_NAME}\" configuration finished.")
@@ -165,12 +201,14 @@ function (sober_library_end)
     else ()
         sober_internal_get_library_base_target_name ("${SOBER_LIBRARY_NAME}" BASE_LIBRARY_TARGET)
         add_library ("${BASE_LIBRARY_TARGET}" "${SOBER_LIBRARY_TYPE}" "${SOBER_LIBRARY_SOURCES}")
-        sober_library_internal_add_base_includes ("${BASE_LIBRARY_TARGET}")
+        sober_internal_library_add_base_includes ("${BASE_LIBRARY_TARGET}")
 
         foreach (SERVICE_NAME IN LISTS SOBER_USED_SERVICES)
-            # TODO: Ability to select api include type (INTERFACE, PUBLIC, PRIVATE)?
+            sober_internal_get_service_usage_scope_variable_name (
+                    "${SOBER_LIBRARY_NAME}" "${SERVICE_NAME}" SCOPE_VARIABLE_NAME)
+
             sober_internal_get_service_target_name ("${SERVICE_NAME}" SERVICE_TARGET)
-            target_link_libraries ("${BASE_LIBRARY_TARGET}" PUBLIC ${SERVICE_TARGET})
+            target_link_libraries ("${BASE_LIBRARY_TARGET}" "${${SCOPE_VARIABLE_NAME}}" ${SERVICE_TARGET})
         endforeach ()
     endif ()
 

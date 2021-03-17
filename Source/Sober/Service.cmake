@@ -94,7 +94,7 @@ endfunction ()
 
 function (sober_implementation_begin IMPLEMENTATION_NAME)
     message (STATUS "        Implementation \"${IMPLEMENTATION_NAME}\" configuration started.")
-    if (NOT SOBER_SERVICE_NAME)
+    if (NOT DEFINED SOBER_SERVICE_NAME)
         message (FATAL_ERROR "Sober: sober_begin_implementation called outside of service definition!")
     endif ()
 
@@ -110,38 +110,36 @@ function (sober_implementation_setup_target LIBRARY_TYPE LIBRARY_SOURCES)
     add_library ("${SOBER_IMPLEMENTATION_TARGET}" ${LIBRARY_TYPE} ${LIBRARY_SOURCES})
 endfunction ()
 
-function (sober_implementation_include_directory DIRECTORY)
+function (sober_internal_implementation_get_dependencies_scope)
     get_property (INTERFACE_USES_IMPLEMENTATION_HEADERS
                   TARGET ${SOBER_SERVICE_TARGET} PROPERTY INTERFACE_USES_IMPLEMENTATION_HEADERS)
 
     if (INTERFACE_USES_IMPLEMENTATION_HEADERS)
-        set (INCLUDES_SCOPE "PUBLIC")
+        set (DEPENDENCIES_SCOPE "PUBLIC" PARENT_SCOPE)
     else ()
-        set (INCLUDES_SCOPE "PRIVATE")
+        set (DEPENDENCIES_SCOPE "PRIVATE" PARENT_SCOPE)
     endif ()
+endfunction ()
 
-    message (STATUS "           Including directory \"${DIRECTORY}\" to \"${INCLUDES_SCOPE}\" scope.")
-    target_include_directories ("${SOBER_IMPLEMENTATION_TARGET}" ${INCLUDES_SCOPE} ${DIRECTORY})
+function (sober_implementation_include_directory DIRECTORY)
+    sober_internal_implementation_get_dependencies_scope ()
+    message (STATUS "           Including directory \"${DIRECTORY}\" to \"${DEPENDENCIES_SCOPE}\" scope.")
+    target_include_directories ("${SOBER_IMPLEMENTATION_TARGET}" "${DEPENDENCIES_SCOPE}" ${DIRECTORY})
 endfunction ()
 
 function (sober_implementation_link_library LIBRARY)
-    get_property (INTERFACE_USES_IMPLEMENTATION_HEADERS
-                  TARGET ${SOBER_SERVICE_TARGET} PROPERTY INTERFACE_USES_IMPLEMENTATION_HEADERS)
-
-    if (INTERFACE_USES_IMPLEMENTATION_HEADERS)
-        set (INCLUDES_SCOPE "PUBLIC")
-    else ()
-        set (INCLUDES_SCOPE "PRIVATE")
-    endif ()
-
-    message (STATUS "           Linking library \"${LIBRARY}\" to \"${INCLUDES_SCOPE}\" scope.")
-    target_link_libraries ("${SOBER_IMPLEMENTATION_TARGET}" ${INCLUDES_SCOPE} ${LIBRARY})
+    sober_internal_implementation_get_dependencies_scope ()
+    message (STATUS "           Linking library \"${LIBRARY}\" to \"${DEPENDENCIES_SCOPE}\" scope.")
+    target_link_libraries ("${SOBER_IMPLEMENTATION_TARGET}" "${DEPENDENCIES_SCOPE}" ${LIBRARY})
 endfunction ()
 
 function (sober_implementation_end)
-    target_link_libraries ("${SOBER_IMPLEMENTATION_TARGET}" PUBLIC ${SOBER_SERVICE_TARGET})
-    message (STATUS "        Implementation \"${SOBER_IMPLEMENTATION_NAME}\" configuration started.")
+    sober_internal_implementation_get_dependencies_scope ()
+    # API include must be affected by includes scope too, otherwise
+    # library link variants will always expose dependant services APIs.
+    target_link_libraries ("${SOBER_IMPLEMENTATION_TARGET}" "${DEPENDENCIES_SCOPE}" ${SOBER_SERVICE_TARGET})
 
+    message (STATUS "        Implementation \"${SOBER_IMPLEMENTATION_NAME}\" configuration started.")
     unset (SOBER_IMPLEMENTATION_NAME PARENT_SCOPE)
     unset (SOBER_IMPLEMENTATION_TARGET PARENT_SCOPE)
 endfunction ()
