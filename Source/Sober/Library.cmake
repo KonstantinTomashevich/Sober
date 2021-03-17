@@ -76,7 +76,7 @@ function (sober_library_set_sources LIBRARY_SOURCES)
     set (SOBER_LIBRARY_SOURCES ${LIBRARY_SOURCES} PARENT_SCOPE)
 endfunction ()
 
-function (sober_library_include_directories INCLUDE_SCOPE INCLUDE_DIRECTORIES)
+function (sober_library_include_directory INCLUDE_SCOPE INCLUDE_DIRECTORY)
     if (SOBER_VARIANT_CONFIGURATION_STARTED)
         message (SEND_ERROR "Sober: caught attempt to add library include directories after variants configuration!")
         return ()
@@ -86,9 +86,8 @@ function (sober_library_include_directories INCLUDE_SCOPE INCLUDE_DIRECTORIES)
         "${INCLUDE_SCOPE}" STREQUAL "PRIVATE" OR
         "${INCLUDE_SCOPE}" STREQUAL "INTERFACE")
 
-        list (APPEND SOBER_LIBRARY_${INCLUDE_SCOPE}_INCLUDES ${INCLUDE_DIRECTORIES})
-        set (SOBER_LIBRARY_${INCLUDE_SCOPE}_INCLUDES
-             ${SOBER_LIBRARY_${INCLUDE_SCOPE}_INCLUDES} PARENT_SCOPE)
+        list (APPEND "SOBER_LIBRARY_${INCLUDE_SCOPE}_INCLUDES" "${INCLUDE_DIRECTORY}")
+        set ("SOBER_LIBRARY_${INCLUDE_SCOPE}_INCLUDES" ${SOBER_LIBRARY_${INCLUDE_SCOPE}_INCLUDES} PARENT_SCOPE)
     else ()
         message (SEND_ERROR "Sober: caught unknown include scope \"${INCLUDE_SCOPE}\"!")
     endif ()
