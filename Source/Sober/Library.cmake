@@ -1,7 +1,7 @@
 include_guard (GLOBAL)
 set (SOBER_BASE_LIBRARY_SUFFIX "Base")
 
-function (sober_begin_library LIBRARY_NAME LIBRARY_TYPE)
+function (sober_library_begin LIBRARY_NAME LIBRARY_TYPE)
     message (STATUS "Library \"${LIBRARY_NAME}\" configuration started.")
     message (STATUS "    Type: ${LIBRARY_TYPE}.")
 
@@ -15,12 +15,12 @@ function (sober_begin_library LIBRARY_NAME LIBRARY_TYPE)
     unset (SOBER_LIBRARY_PUBLIC_INCLUDES PARENT_SCOPE)
     unset (SOBER_LIBRARY_PRIVATE_INCLUDES PARENT_SCOPE)
     unset (SOBER_LIBRARY_INTERFACE_INCLUDES PARENT_SCOPE)
-    unset (SOBER_LIBRARY_CONFIGURATION_DONE PARENT_SCOPE)
+    unset (SOBER_VARIANT_CONFIGURATION_STARTED PARENT_SCOPE)
 endfunction ()
 
-function (sober_use_service SERVICE_NAME)
-    if (SOBER_LIBRARY_CONFIGURATION_DONE)
-        message (SEND_ERROR "Sober: caught attempt to add service usage after variants registrations!")
+function (sober_library_use_service SERVICE_NAME)
+    if (SOBER_VARIANT_CONFIGURATION_STARTED)
+        message (SEND_ERROR "Sober: caught attempt to add service usage after variants configuration!")
     endif ()
 
     if (NOT TARGET ${SERVICE_NAME})
@@ -29,9 +29,11 @@ function (sober_use_service SERVICE_NAME)
 
     list (FIND SOBER_USED_SERVICES ${SERVICE_NAME} FOUND_INDEX)
     if (FOUND_INDEX EQUAL -1)
-        get_property (USES_IMPLEMENTATION_HEADERS TARGET ${SERVICE_NAME} PROPERTY INTERFACE_USES_IMPLEMENTATION_HEADERS)
+        get_property (USES_IMPLEMENTATION_HEADERS TARGET ${SERVICE_NAME}
+                      PROPERTY INTERFACE_USES_IMPLEMENTATION_HEADERS)
+
         if (USES_IMPLEMENTATION_HEADERS)
-            set (SOBER_UNABLE_TO_USE_LINK_VARIANTS TRUE  PARENT_SCOPE)
+            set (SOBER_UNABLE_TO_USE_LINK_VARIANTS TRUE PARENT_SCOPE)
         endif ()
 
         list (APPEND SOBER_USED_SERVICES ${SERVICE_NAME})
@@ -42,17 +44,17 @@ function (sober_use_service SERVICE_NAME)
     endif ()
 endfunction ()
 
-function (sober_set_library_sources LIBRARY_SOURCES)
-    if (SOBER_LIBRARY_CONFIGURATION_DONE)
-        message (SEND_ERROR "Sober: caught attempt to set library sources after variants registrations!")
+function (sober_library_set_sources LIBRARY_SOURCES)
+    if (SOBER_VARIANT_CONFIGURATION_STARTED)
+        message (SEND_ERROR "Sober: caught attempt to set library sources after variants configuration!")
     endif ()
 
     set (SOBER_LIBRARY_SOURCES ${LIBRARY_SOURCES} PARENT_SCOPE)
 endfunction ()
 
-function (sober_add_library_include_directories INCLUDE_SCOPE INCLUDE_DIRECTORIES)
-    if (SOBER_LIBRARY_CONFIGURATION_DONE)
-        message (SEND_ERROR "Sober: caught attempt to add library include directories after variants registrations!")
+function (sober_library_include_directories INCLUDE_SCOPE INCLUDE_DIRECTORIES)
+    if (SOBER_VARIANT_CONFIGURATION_STARTED)
+        message (SEND_ERROR "Sober: caught attempt to add library include directories after variants configuration!")
     endif ()
 
     if (${INCLUDE_SCOPE} STREQUAL "PUBLIC" OR
@@ -67,34 +69,32 @@ function (sober_add_library_include_directories INCLUDE_SCOPE INCLUDE_DIRECTORIE
     endif ()
 endfunction ()
 
-function (sober_begin_variant VARIANT_NAME)
+function (sober_variant_begin VARIANT_NAME)
     if (VARIANT_NAME STREQUAL SOBER_BASE_LIBRARY_SUFFIX)
         message (FATAL_ERROR "Sober: can not use variant name \"${VARIANT_NAME}\", because it's reserved suffix!")
     endif ()
 
-    set (SOBER_LIBRARY_CONFIGURATION_DONE TRUE PARENT_SCOPE)
+    set (SOBER_VARIANT_CONFIGURATION_STARTED TRUE PARENT_SCOPE)
     set (SOBER_VARIANT_NAME ${VARIANT_NAME} PARENT_SCOPE)
     message (STATUS "    Variant \"${VARIANT_NAME}\" configuration started.")
 endfunction ()
 
-function (sober_set_default_service_implementation SERVICE_NAME DEFAULT_IMPLEMENTATION)
-    # TODO: Check is service used?
+function (sober_variant_set_default_implementation SERVICE_NAME DEFAULT_IMPLEMENTATION)
     set (${SOBER_LIBRARY_NAME}${SOBER_VARIANT_NAME}_${SERVICE_NAME}_SELECTED_IMPLEMENTATION
          ${DEFAULT_IMPLEMENTATION} CACHE STRING)
 endfunction ()
 
-function (sober_freeze_service_implementation SERVICE_NAME CONSTANT_IMPLEMENTATION)
-    # TODO: Check is service used?
+function (sober_variant_freeze_implementation SERVICE_NAME CONSTANT_IMPLEMENTATION)
     set (${SOBER_LIBRARY_NAME}${SOBER_VARIANT_NAME}_${SERVICE_NAME}_SELECTED_IMPLEMENTATION ${CONSTANT_IMPLEMENTATION})
 endfunction ()
 
-function (sober_add_base_library_includes TARGET_NAME)
+function (sober_library_internal_add_base_includes TARGET_NAME)
     target_include_directories ("${TARGET_NAME}" PUBLIC ${SOBER_LIBRARY_PUBLIC_INCLUDES})
     target_include_directories ("${TARGET_NAME}" PRIVATE ${SOBER_LIBRARY_PRIVATE_INCLUDES})
     target_include_directories ("${TARGET_NAME}" INTERFACE ${SOBER_LIBRARY_INTERFACE_INCLUDES})
 endfunction ()
 
-function (sober_end_variant)
+function (sober_variant_end)
     foreach (SERVICE_NAME IN LISTS SOBER_USED_SERVICES)
         if (NOT ${SOBER_LIBRARY_NAME}${SOBER_VARIANT_NAME}_${SERVICE_NAME}_SELECTED_IMPLEMENTATION)
             get_property (DEFAULT_IMPLEMENTATION TARGET ${SERVICE_NAME}
@@ -118,7 +118,7 @@ function (sober_end_variant)
     set (TARGET_NAME "${SOBER_LIBRARY_NAME}${SOBER_VARIANT_NAME}")
     if (SOBER_UNABLE_TO_USE_LINK_VARIANTS)
         add_library (${TARGET_NAME} ${SOBER_LIBRARY_TYPE} ${SOBER_LIBRARY_SOURCES})
-        sober_add_base_library_includes (${TARGET_NAME})
+        sober_library_internal_add_base_includes (${TARGET_NAME})
         # TODO: Ability to select api include type (INTERFACE, PUBLIC, PRIVATE)?
         set (SERVICE_LINK_TYPE "PUBLIC")
     else ()
@@ -129,17 +129,17 @@ function (sober_end_variant)
 
     foreach (SERVICE_NAME IN LISTS SOBER_USED_SERVICES)
         set (SERVICE_IMPLEMENTATION
-                "${${SOBER_LIBRARY_NAME}${SOBER_VARIANT_NAME}_${SERVICE_NAME}_SELECTED_IMPLEMENTATION}")
+             "${${SOBER_LIBRARY_NAME}${SOBER_VARIANT_NAME}_${SERVICE_NAME}_SELECTED_IMPLEMENTATION}")
         target_link_libraries (${TARGET_NAME} ${SERVICE_LINK_TYPE} "${SERVICE_NAME}${SERVICE_IMPLEMENTATION}")
     endforeach ()
 
     message (STATUS "    Variant \"${SOBER_VARIANT_NAME}\" configuration finished.")
 endfunction ()
 
-function (sober_end_library)
+function (sober_library_end)
     if (SOBER_UNABLE_TO_USE_LINK_VARIANTS)
         message (STATUS
-                "    Forced to compile variants separately because several services use implementation headers:")
+                 "    Forced to compile variants separately because several services use implementation headers:")
 
         foreach (SERVICE_NAME IN LISTS SOBER_USED_SERVICES)
             if (SOBER_${SERVICE_NAME}_USES_IMPLEMENTATION_HEADERS)
@@ -149,7 +149,7 @@ function (sober_end_library)
     else ()
         add_library ("${SOBER_LIBRARY_NAME}${SOBER_BASE_LIBRARY_SUFFIX}"
                      ${SOBER_LIBRARY_TYPE} ${SOBER_LIBRARY_SOURCES})
-        sober_add_base_library_includes ("${SOBER_LIBRARY_NAME}${SOBER_BASE_LIBRARY_SUFFIX}")
+        sober_library_internal_add_base_includes ("${SOBER_LIBRARY_NAME}${SOBER_BASE_LIBRARY_SUFFIX}")
 
         foreach (SERVICE_NAME IN LISTS SOBER_USED_SERVICES)
             # TODO: Ability to select api include type (INTERFACE, PUBLIC, PRIVATE)?

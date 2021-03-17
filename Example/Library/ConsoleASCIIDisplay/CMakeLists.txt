@@ -1,11 +1,11 @@
-sober_begin_library (ConsoleASCIIDisplay STATIC)
+sober_library_begin (ConsoleASCIIDisplay STATIC)
     file (GLOB_RECURSE SOURCES *.cpp)
     file (GLOB_RECURSE HEADERS *.hpp)
     list (APPEND SOURCES ${HEADERS})
 
-    sober_set_library_sources ("${SOURCES}")
-    sober_add_library_include_directories (PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+    sober_library_set_sources ("${SOURCES}")
+    sober_library_include_directories (PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
-    sober_begin_variant (Original)
-    sober_end_variant ()
-sober_end_library ()
+    sober_variant_begin (Original)
+    sober_variant_end ()
+sober_library_end ()
