@@ -1,10 +1,13 @@
 include_guard (GLOBAL)
+include (${CMAKE_CURRENT_LIST_DIR}/Naming.cmake)
 
 function (sober_service_begin SERVICE_NAME)
     message (STATUS "Service \"${SERVICE_NAME}\" configuration started.")
     set (SOBER_SERVICE_NAME "${SERVICE_NAME}" PARENT_SCOPE)
+    sober_internal_get_service_target_name ("${SERVICE_NAME}" SOBER_SERVICE_TARGET)
+    set (SOBER_SERVICE_TARGET "${SOBER_SERVICE_TARGET}" PARENT_SCOPE)
 
-    add_library (${SERVICE_NAME} INTERFACE)
+    add_library (${SOBER_SERVICE_TARGET} INTERFACE)
     define_property (TARGET PROPERTY INTERFACE_SERVICE_DEFAULT_IMPLEMENTATION
                      BRIEF_DOCS "Name of service default implementation."
                      FULL_DOCS "\
@@ -17,18 +20,18 @@ request for other implementation in library definition code.")
 If service API headers include implementation-specific headers, library variants \
 can not be defined as link-only variants and must be compiled separately.")
 
-    set_property (TARGET ${SERVICE_NAME} PROPERTY INTERFACE_USES_IMPLEMENTATION_HEADERS FALSE)
+    set_property (TARGET ${SOBER_SERVICE_TARGET} PROPERTY INTERFACE_USES_IMPLEMENTATION_HEADERS FALSE)
     unset (SOBER_IMPLEMENTATION_REGISTRATION_STARTED PARENT_SCOPE)
 endfunction ()
 
 function (sober_service_include_directory INCLUDE_DIRECTORY)
     message (STATUS "    Adding include directory: \"${INCLUDE_DIRECTORY}\".")
-    target_include_directories (${SOBER_SERVICE_NAME} INTERFACE "${INCLUDE_DIRECTORY}")
+    target_include_directories (${SOBER_SERVICE_TARGET} INTERFACE "${INCLUDE_DIRECTORY}")
 endfunction ()
 
-function (sober_service_add_api_dependency TARGET_NAME)
-    message (STATUS "    Adding API dependency: \"${TARGET_NAME}\".")
-    target_link_libraries (${SOBER_SERVICE_NAME} INTERFACE "${TARGET_NAME}")
+function (sober_service_add_api_dependency TARGET)
+    message (STATUS "    Adding API dependency: \"${TARGET}\".")
+    target_link_libraries (${SOBER_SERVICE_TARGET} INTERFACE "${TARGET}")
 endfunction ()
 
 function (sober_service_require_implementation_headers)
@@ -38,7 +41,7 @@ function (sober_service_require_implementation_headers)
     endif ()
 
     message (STATUS "    Implementation headers are REQUIRED by API headers!")
-    set_property (TARGET ${SOBER_SERVICE_NAME}
+    set_property (TARGET ${SOBER_SERVICE_TARGET}
                   PROPERTY INTERFACE_USES_IMPLEMENTATION_HEADERS TRUE)
 endfunction ()
 
@@ -49,7 +52,7 @@ function (sober_service_add_implementation IMPLEMENTATION_DIRECTORY)
 endfunction ()
 
 function (sober_service_set_default_implementation IMPLEMENTATION_NAME)
-    get_property (DEFAULT_IMPLEMENTATION_SELECTED TARGET ${SOBER_SERVICE_NAME}
+    get_property (DEFAULT_IMPLEMENTATION_SELECTED TARGET ${SOBER_SERVICE_TARGET}
                   PROPERTY INTERFACE_SERVICE_DEFAULT_IMPLEMENTATION SET)
 
     if (DEFAULT_IMPLEMENTATION_SELECTED)
@@ -60,21 +63,24 @@ Sober: unable to make \"${IMPLEMENTATION_NAME}\" default implementation for serv
         return ()
     endif ()
 
-    if (NOT TARGET "${SOBER_SERVICE_NAME}${IMPLEMENTATION_NAME}")
+    sober_internal_get_implementation_target_name (
+            "${SOBER_SERVICE_NAME}" "${IMPLEMENTATION_NAME}" IMPLEMENTATION_TARGET)
+
+    if (NOT TARGET "${IMPLEMENTATION_TARGET}")
         message (SEND_ERROR "\
 Sober: unable to make \"${IMPLEMENTATION_NAME}\" default implementation for service \
-\"${SOBER_SERVICE_NAME}\", because there is no target with name \"${SOBER_SERVICE_NAME}${IMPLEMENTATION_NAME}\"!")
+\"${SOBER_SERVICE_NAME}\", because there is no target with name \"${IMPLEMENTATION_TARGET}\"!")
         return ()
     endif ()
 
-    set_property (TARGET ${SOBER_SERVICE_NAME}
+    set_property (TARGET ${SOBER_SERVICE_TARGET}
                   PROPERTY INTERFACE_SERVICE_DEFAULT_IMPLEMENTATION ${IMPLEMENTATION_NAME})
 
     message (STATUS "        Selected as default implementation!")
 endfunction ()
 
 function (sober_service_end)
-    get_property (DEFAULT_IMPLEMENTATION_SELECTED TARGET ${SOBER_SERVICE_NAME}
+    get_property (DEFAULT_IMPLEMENTATION_SELECTED TARGET ${SOBER_SERVICE_TARGET}
                   PROPERTY INTERFACE_SERVICE_DEFAULT_IMPLEMENTATION SET)
 
     if (NOT DEFAULT_IMPLEMENTATION_SELECTED)
@@ -83,6 +89,7 @@ function (sober_service_end)
 
     message (STATUS "Service \"${SOBER_SERVICE_NAME}\" configuration finished.")
     unset (SOBER_SERVICE_NAME PARENT_SCOPE)
+    unset (SOBER_SERVICE_TARGET PARENT_SCOPE)
 endfunction ()
 
 function (sober_implementation_begin IMPLEMENTATION_NAME)
@@ -92,17 +99,20 @@ function (sober_implementation_begin IMPLEMENTATION_NAME)
     endif ()
 
     set (SOBER_IMPLEMENTATION_NAME ${IMPLEMENTATION_NAME} PARENT_SCOPE)
+    sober_internal_get_implementation_target_name (
+            "${SOBER_SERVICE_NAME}" "${IMPLEMENTATION_NAME}" SOBER_IMPLEMENTATION_TARGET)
+    set (SOBER_IMPLEMENTATION_TARGET "${SOBER_IMPLEMENTATION_TARGET}" PARENT_SCOPE)
 endfunction ()
 
 function (sober_implementation_setup_target LIBRARY_TYPE LIBRARY_SOURCES)
-    message (STATUS "           Adding implementation library \"${SOBER_SERVICE_NAME}${SOBER_IMPLEMENTATION_NAME}\".")
+    message (STATUS "           Adding implementation library \"${SOBER_IMPLEMENTATION_TARGET}\".")
     message (STATUS "           Library type is \"${LIBRARY_TYPE}\".")
-    add_library ("${SOBER_SERVICE_NAME}${SOBER_IMPLEMENTATION_NAME}" ${LIBRARY_TYPE} ${LIBRARY_SOURCES})
+    add_library ("${SOBER_IMPLEMENTATION_TARGET}" ${LIBRARY_TYPE} ${LIBRARY_SOURCES})
 endfunction ()
 
 function (sober_implementation_include_directory DIRECTORY)
     get_property (INTERFACE_USES_IMPLEMENTATION_HEADERS
-                  TARGET ${SOBER_SERVICE_NAME} PROPERTY INTERFACE_USES_IMPLEMENTATION_HEADERS)
+                  TARGET ${SOBER_SERVICE_TARGET} PROPERTY INTERFACE_USES_IMPLEMENTATION_HEADERS)
 
     if (INTERFACE_USES_IMPLEMENTATION_HEADERS)
         set (INCLUDES_SCOPE "PUBLIC")
@@ -111,12 +121,12 @@ function (sober_implementation_include_directory DIRECTORY)
     endif ()
 
     message (STATUS "           Including directory \"${DIRECTORY}\" to \"${INCLUDES_SCOPE}\" scope.")
-    target_include_directories ("${SOBER_SERVICE_NAME}${SOBER_IMPLEMENTATION_NAME}" ${INCLUDES_SCOPE} ${DIRECTORY})
+    target_include_directories ("${SOBER_IMPLEMENTATION_TARGET}" ${INCLUDES_SCOPE} ${DIRECTORY})
 endfunction ()
 
 function (sober_implementation_link_library LIBRARY)
     get_property (INTERFACE_USES_IMPLEMENTATION_HEADERS
-                  TARGET ${SOBER_SERVICE_NAME} PROPERTY INTERFACE_USES_IMPLEMENTATION_HEADERS)
+                  TARGET ${SOBER_SERVICE_TARGET} PROPERTY INTERFACE_USES_IMPLEMENTATION_HEADERS)
 
     if (INTERFACE_USES_IMPLEMENTATION_HEADERS)
         set (INCLUDES_SCOPE "PUBLIC")
@@ -125,11 +135,13 @@ function (sober_implementation_link_library LIBRARY)
     endif ()
 
     message (STATUS "           Linking library \"${LIBRARY}\" to \"${INCLUDES_SCOPE}\" scope.")
-    target_link_libraries ("${SOBER_SERVICE_NAME}${SOBER_IMPLEMENTATION_NAME}" ${INCLUDES_SCOPE} ${LIBRARY})
+    target_link_libraries ("${SOBER_IMPLEMENTATION_TARGET}" ${INCLUDES_SCOPE} ${LIBRARY})
 endfunction ()
 
 function (sober_implementation_end)
-    target_link_libraries ("${SOBER_SERVICE_NAME}${SOBER_IMPLEMENTATION_NAME}" PUBLIC ${SOBER_SERVICE_NAME})
+    target_link_libraries ("${SOBER_IMPLEMENTATION_TARGET}" PUBLIC ${SOBER_SERVICE_TARGET})
     message (STATUS "        Implementation \"${SOBER_IMPLEMENTATION_NAME}\" configuration started.")
+
     unset (SOBER_IMPLEMENTATION_NAME PARENT_SCOPE)
+    unset (SOBER_IMPLEMENTATION_TARGET PARENT_SCOPE)
 endfunction ()

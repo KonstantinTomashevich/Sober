@@ -5,5 +5,6 @@ sober_implementation_begin (PlainText)
 
     sober_implementation_setup_target (STATIC "${SOURCES}")
     sober_implementation_include_directory (${CMAKE_CURRENT_SOURCE_DIR})
-    sober_implementation_link_library (PlainTextPersistenceOriginal)
+    sober_internal_get_variant_target_name (PlainTextPersistence Original IMPLEMENTATION_LIBRARY_TARGET)
+    sober_implementation_link_library ("${IMPLEMENTATION_LIBRARY_TARGET}")
 sober_implementation_end ()
