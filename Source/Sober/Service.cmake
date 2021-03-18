@@ -1,11 +1,18 @@
+# Service.cmake contains functions for services and implementations configuration routine.
+# Implementation-related configuration functions are stored in one file with service configuration
+# functions because implementation configuration routine is part of service configuration routine.
+
 include_guard (GLOBAL)
 include (${CMAKE_CURRENT_LIST_DIR}/Naming.cmake)
 
+# Service configuration top level routine opener.
 function (sober_service_begin SERVICE_NAME)
     message (STATUS "Service \"${SERVICE_NAME}\" configuration started.")
     set (SOBER_SERVICE_NAME "${SERVICE_NAME}" PARENT_SCOPE)
+
     sober_naming_service_target ("${SERVICE_NAME}" SOBER_SERVICE_TARGET)
     set (SOBER_SERVICE_TARGET "${SOBER_SERVICE_TARGET}" PARENT_SCOPE)
+    set (SOBER_IMPLEMENTATION_DEPENDENCIES_SCOPE "PRIVATE" PARENT_SCOPE)
 
     add_library (${SOBER_SERVICE_TARGET} INTERFACE)
     define_property (TARGET PROPERTY INTERFACE_SERVICE_DEFAULT_IMPLEMENTATION
@@ -24,16 +31,22 @@ can not be defined as link-only variants and must be compiled separately.")
     unset (SOBER_IMPLEMENTATION_REGISTRATION_STARTED PARENT_SCOPE)
 endfunction ()
 
+# Part of service configuration top level routine.
 function (sober_service_include_directory INCLUDE_DIRECTORY)
     message (STATUS "    Adding include directory: \"${INCLUDE_DIRECTORY}\".")
     target_include_directories (${SOBER_SERVICE_TARGET} INTERFACE "${INCLUDE_DIRECTORY}")
 endfunction ()
 
+# Links any other target to current service target.
+# Part of service configuration top level routine.
 function (sober_service_add_api_dependency TARGET)
     message (STATUS "    Adding API dependency: \"${TARGET}\".")
     target_link_libraries (${SOBER_SERVICE_TARGET} INTERFACE "${TARGET}")
 endfunction ()
 
+# Informs Sober that given service API will include implementation headers (for example, with template
+# implementations), therefore variants of libraries, that use this services, must be compiled separately.
+# Part of service configuration top level routine. Should be called before implementation additions.
 function (sober_service_require_implementation_headers)
     if (SOBER_IMPLEMENTATION_REGISTRATION_STARTED)
         message (SEND_ERROR
@@ -41,16 +54,21 @@ function (sober_service_require_implementation_headers)
     endif ()
 
     message (STATUS "    Implementation headers are REQUIRED by API headers!")
-    set_property (TARGET ${SOBER_SERVICE_TARGET}
-                  PROPERTY INTERFACE_USES_IMPLEMENTATION_HEADERS TRUE)
+    set_property (TARGET ${SOBER_SERVICE_TARGET} PROPERTY INTERFACE_USES_IMPLEMENTATION_HEADERS TRUE)
+    set (SOBER_IMPLEMENTATION_DEPENDENCIES_SCOPE "PUBLIC" PARENT_SCOPE)
 endfunction ()
 
+# Adds implementation from given directory to current service.
+# Part of service configuration top level routine.
 function (sober_service_add_implementation IMPLEMENTATION_DIRECTORY)
     message (STATUS "    Adding implementation from \"${IMPLEMENTATION_DIRECTORY}\".")
     set (SOBER_IMPLEMENTATION_REGISTRATION_STARTED TRUE PARENT_SCOPE)
     add_subdirectory (${IMPLEMENTATION_DIRECTORY})
 endfunction ()
 
+# Selects service default implementation. Every service must have default implementation.
+# Also this method should be called after given implementation addition.
+# Part of service configuration top level routine.
 function (sober_service_set_default_implementation IMPLEMENTATION_NAME)
     get_property (DEFAULT_IMPLEMENTATION_SELECTED TARGET ${SOBER_SERVICE_TARGET}
                   PROPERTY INTERFACE_SERVICE_DEFAULT_IMPLEMENTATION SET)
@@ -79,6 +97,7 @@ Sober: unable to make \"${IMPLEMENTATION_NAME}\" default implementation for serv
     message (STATUS "        Selected as default implementation!")
 endfunction ()
 
+# Service configuration top level routine closer.
 function (sober_service_end)
     get_property (DEFAULT_IMPLEMENTATION_SELECTED TARGET ${SOBER_SERVICE_TARGET}
                   PROPERTY INTERFACE_SERVICE_DEFAULT_IMPLEMENTATION SET)
@@ -92,6 +111,7 @@ function (sober_service_end)
     unset (SOBER_SERVICE_TARGET PARENT_SCOPE)
 endfunction ()
 
+# Implementation configuration secondary level routine opener. Part of service configuration top level routine.
 function (sober_implementation_begin IMPLEMENTATION_NAME)
     message (STATUS "        Implementation \"${IMPLEMENTATION_NAME}\" configuration started.")
     if (NOT DEFINED SOBER_SERVICE_NAME)
@@ -104,40 +124,34 @@ function (sober_implementation_begin IMPLEMENTATION_NAME)
     set (SOBER_IMPLEMENTATION_TARGET "${SOBER_IMPLEMENTATION_TARGET}" PARENT_SCOPE)
 endfunction ()
 
+# Part of implementation configuration secondary level routine.
 function (sober_implementation_setup_target LIBRARY_TYPE LIBRARY_SOURCES)
     message (STATUS "           Adding implementation library \"${SOBER_IMPLEMENTATION_TARGET}\".")
     message (STATUS "           Library type is \"${LIBRARY_TYPE}\".")
     add_library ("${SOBER_IMPLEMENTATION_TARGET}" ${LIBRARY_TYPE} ${LIBRARY_SOURCES})
 endfunction ()
 
-function (sober_internal_implementation_get_dependencies_scope)
-    get_property (INTERFACE_USES_IMPLEMENTATION_HEADERS
-                  TARGET ${SOBER_SERVICE_TARGET} PROPERTY INTERFACE_USES_IMPLEMENTATION_HEADERS)
-
-    if (INTERFACE_USES_IMPLEMENTATION_HEADERS)
-        set (DEPENDENCIES_SCOPE "PUBLIC" PARENT_SCOPE)
-    else ()
-        set (DEPENDENCIES_SCOPE "PRIVATE" PARENT_SCOPE)
-    endif ()
-endfunction ()
-
+# Part of implementation configuration secondary level routine.
 function (sober_implementation_include_directory DIRECTORY)
-    sober_internal_implementation_get_dependencies_scope ()
-    message (STATUS "           Including directory \"${DIRECTORY}\" to \"${DEPENDENCIES_SCOPE}\" scope.")
-    target_include_directories ("${SOBER_IMPLEMENTATION_TARGET}" "${DEPENDENCIES_SCOPE}" ${DIRECTORY})
+    message (STATUS
+             "           Including directory \"${DIRECTORY}\" to \"${SOBER_IMPLEMENTATION_DEPENDENCIES_SCOPE}\" scope.")
+    target_include_directories ("${SOBER_IMPLEMENTATION_TARGET}"
+                                "${SOBER_IMPLEMENTATION_DEPENDENCIES_SCOPE}" ${DIRECTORY})
 endfunction ()
 
+# Part of implementation configuration secondary level routine.
 function (sober_implementation_link_library LIBRARY)
-    sober_internal_implementation_get_dependencies_scope ()
-    message (STATUS "           Linking library \"${LIBRARY}\" to \"${DEPENDENCIES_SCOPE}\" scope.")
-    target_link_libraries ("${SOBER_IMPLEMENTATION_TARGET}" "${DEPENDENCIES_SCOPE}" ${LIBRARY})
+    message (STATUS
+             "           Linking library \"${LIBRARY}\" to \"${SOBER_IMPLEMENTATION_DEPENDENCIES_SCOPE}\" scope.")
+    target_link_libraries ("${SOBER_IMPLEMENTATION_TARGET}" "${SOBER_IMPLEMENTATION_DEPENDENCIES_SCOPE}" ${LIBRARY})
 endfunction ()
 
+# Implementation configuration secondary level routine closer. Part of service configuration top level routine.
 function (sober_implementation_end)
-    sober_internal_implementation_get_dependencies_scope ()
-    # API include must be affected by includes scope too, otherwise
-    # library link variants will always expose dependant services APIs.
-    target_link_libraries ("${SOBER_IMPLEMENTATION_TARGET}" "${DEPENDENCIES_SCOPE}" ${SOBER_SERVICE_TARGET})
+    # API includes must be affected by dependencies scope too, otherwise
+    # library link variants will always expose used services APIs.
+    target_link_libraries ("${SOBER_IMPLEMENTATION_TARGET}"
+                           "${SOBER_IMPLEMENTATION_DEPENDENCIES_SCOPE}" ${SOBER_SERVICE_TARGET})
 
     message (STATUS "        Implementation \"${SOBER_IMPLEMENTATION_NAME}\" configuration started.")
     unset (SOBER_IMPLEMENTATION_NAME PARENT_SCOPE)
