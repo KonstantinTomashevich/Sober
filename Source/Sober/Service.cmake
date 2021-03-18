@@ -4,7 +4,7 @@ include (${CMAKE_CURRENT_LIST_DIR}/Naming.cmake)
 function (sober_service_begin SERVICE_NAME)
     message (STATUS "Service \"${SERVICE_NAME}\" configuration started.")
     set (SOBER_SERVICE_NAME "${SERVICE_NAME}" PARENT_SCOPE)
-    sober_internal_get_service_target_name ("${SERVICE_NAME}" SOBER_SERVICE_TARGET)
+    sober_naming_service_target ("${SERVICE_NAME}" SOBER_SERVICE_TARGET)
     set (SOBER_SERVICE_TARGET "${SOBER_SERVICE_TARGET}" PARENT_SCOPE)
 
     add_library (${SOBER_SERVICE_TARGET} INTERFACE)
@@ -63,7 +63,7 @@ Sober: unable to make \"${IMPLEMENTATION_NAME}\" default implementation for serv
         return ()
     endif ()
 
-    sober_internal_get_implementation_target_name (
+    sober_naming_implementation_target (
             "${SOBER_SERVICE_NAME}" "${IMPLEMENTATION_NAME}" IMPLEMENTATION_TARGET)
 
     if (NOT TARGET "${IMPLEMENTATION_TARGET}")
@@ -99,7 +99,7 @@ function (sober_implementation_begin IMPLEMENTATION_NAME)
     endif ()
 
     set (SOBER_IMPLEMENTATION_NAME ${IMPLEMENTATION_NAME} PARENT_SCOPE)
-    sober_internal_get_implementation_target_name (
+    sober_naming_implementation_target (
             "${SOBER_SERVICE_NAME}" "${IMPLEMENTATION_NAME}" SOBER_IMPLEMENTATION_TARGET)
     set (SOBER_IMPLEMENTATION_TARGET "${SOBER_IMPLEMENTATION_TARGET}" PARENT_SCOPE)
 endfunction ()

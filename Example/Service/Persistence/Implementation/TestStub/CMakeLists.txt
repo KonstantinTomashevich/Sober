@@ -5,6 +5,6 @@ sober_implementation_begin (TestStub)
 
     sober_implementation_setup_target (STATIC "${SOURCES}")
     sober_implementation_include_directory (${CMAKE_CURRENT_SOURCE_DIR})
-    sober_internal_get_variant_target_name (TestStubPersistence Original IMPLEMENTATION_LIBRARY_TARGET)
+    sober_naming_variant_target (TestStubPersistence Original IMPLEMENTATION_LIBRARY_TARGET)
     sober_implementation_link_library ("${IMPLEMENTATION_LIBRARY_TARGET}")
 sober_implementation_end ()

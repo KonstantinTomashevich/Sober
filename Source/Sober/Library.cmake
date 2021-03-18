@@ -1,6 +1,11 @@
 include_guard (GLOBAL)
 include (${CMAKE_CURRENT_LIST_DIR}/Naming.cmake)
 
+function (sober_internal_naming_service_usage_scope_variable LIBRARY_NAME SERVICE_NAME OUTPUT_VARIABLE)
+    sober_naming_library_variable ("${LIBRARY_NAME}" "${SERVICE_NAME}_SCOPE" "${OUTPUT_VARIABLE}")
+    set ("${OUTPUT_VARIABLE}" "${${OUTPUT_VARIABLE}}" PARENT_SCOPE)
+endfunction ()
+
 function (sober_library_begin LIBRARY_NAME LIBRARY_TYPE)
     message (STATUS "Library \"${LIBRARY_NAME}\" configuration started.")
     message (STATUS "    Type: ${LIBRARY_TYPE}.")
@@ -43,7 +48,7 @@ function (sober_library_use_service SERVICE_NAME USAGE_SCOPE)
         return ()
     endif ()
 
-    sober_internal_get_service_target_name ("${SERVICE_NAME}" SERVICE_TARGET)
+    sober_naming_service_target ("${SERVICE_NAME}" SERVICE_TARGET)
     if (NOT TARGET ${SERVICE_TARGET})
         message (SEND_ERROR "Sober: service \"${SERVICE_NAME}\" is not found!")
         return ()
@@ -61,7 +66,7 @@ function (sober_library_use_service SERVICE_NAME USAGE_SCOPE)
         list (APPEND SOBER_USED_SERVICES ${SERVICE_NAME})
         set (SOBER_USED_SERVICES ${SOBER_USED_SERVICES} PARENT_SCOPE)
 
-        sober_internal_get_service_usage_scope_variable_name (
+        sober_internal_naming_service_usage_scope_variable (
                 "${SOBER_LIBRARY_NAME}" "${SERVICE_NAME}" SCOPE_VARIABLE_NAME)
 
         set ("${SCOPE_VARIABLE_NAME}" "${USAGE_SCOPE}" PARENT_SCOPE)
@@ -120,19 +125,20 @@ function (sober_variant_begin VARIANT_NAME)
     set (SOBER_VARIANT_CONFIGURATION_STARTED TRUE PARENT_SCOPE)
     set (SOBER_VARIANT_NAME ${VARIANT_NAME} PARENT_SCOPE)
 
-    sober_internal_get_variant_target_name ("${SOBER_LIBRARY_NAME}" "${VARIANT_NAME}" SOBER_VARIANT_TARGET)
+    sober_naming_variant_target ("${SOBER_LIBRARY_NAME}" "${VARIANT_NAME}" SOBER_VARIANT_TARGET)
     set (SOBER_VARIANT_TARGET "${SOBER_VARIANT_TARGET}" PARENT_SCOPE)
     message (STATUS "    Variant \"${VARIANT_NAME}\" configuration started.")
 endfunction ()
 
 function (sober_variant_set_default_implementation SERVICE_NAME DEFAULT_IMPLEMENTATION)
-    sober_internal_get_selected_implementation_variable_name (
+    # TODO: Think about context validation. Will it really slow down configuration stage?
+    sober_naming_selected_implementation_variable (
             "${SOBER_LIBRARY_NAME}" "${SOBER_VARIANT_NAME}" "${SERVICE_NAME}" VARIABLE)
     set ("${VARIABLE}" "${DEFAULT_IMPLEMENTATION}" CACHE STRING)
 endfunction ()
 
 function (sober_variant_freeze_implementation SERVICE_NAME CONSTANT_IMPLEMENTATION)
-    sober_internal_get_selected_implementation_variable_name (
+    sober_naming_selected_implementation_variable (
             "${SOBER_LIBRARY_NAME}" "${SOBER_VARIANT_NAME}" "${SERVICE_NAME}" VARIABLE)
     set ("${VARIABLE}" "${CONSTANT_IMPLEMENTATION}" PARENT_SCOPE)
 endfunction ()
@@ -149,17 +155,17 @@ endfunction ()
 
 function (sober_variant_end)
     foreach (SERVICE_NAME IN LISTS SOBER_USED_SERVICES)
-        sober_internal_get_selected_implementation_variable_name (
+        sober_naming_selected_implementation_variable (
                 "${SOBER_LIBRARY_NAME}" "${SOBER_VARIANT_NAME}" "${SERVICE_NAME}" IMPLEMENTATION_VARIABLE_NAME)
 
         if (NOT DEFINED "${IMPLEMENTATION_VARIABLE_NAME}")
-            sober_internal_get_service_target_name ("${SERVICE_NAME}" SERVICE_TARGET)
+            sober_naming_service_target ("${SERVICE_NAME}" SERVICE_TARGET)
             get_property (IMPLEMENTATION TARGET ${SERVICE_TARGET} PROPERTY INTERFACE_SERVICE_DEFAULT_IMPLEMENTATION)
             set ("${IMPLEMENTATION_VARIABLE_NAME}" ${IMPLEMENTATION})
         endif ()
 
         set (SERVICE_IMPLEMENTATION "${${IMPLEMENTATION_VARIABLE_NAME}}")
-        sober_internal_get_implementation_target_name (
+        sober_naming_implementation_target (
                 "${SERVICE_NAME}" "${SERVICE_IMPLEMENTATION}" IMPLEMENTATION_TARGET)
 
         if (TARGET "${IMPLEMENTATION_TARGET}")
@@ -175,18 +181,18 @@ function (sober_variant_end)
         sober_internal_library_add_base_target_dependencies ("${SOBER_VARIANT_TARGET}")
     else ()
         add_library ("${SOBER_VARIANT_TARGET}" INTERFACE)
-        sober_internal_get_library_base_target_name ("${SOBER_LIBRARY_NAME}" BASE_LIBRARY_TARGET)
+        sober_naming_library_base_target ("${SOBER_LIBRARY_NAME}" BASE_LIBRARY_TARGET)
         target_link_libraries ("${SOBER_VARIANT_TARGET}" INTERFACE "${BASE_LIBRARY_TARGET}")
     endif ()
 
     foreach (SERVICE_NAME IN LISTS SOBER_USED_SERVICES)
-        sober_internal_get_selected_implementation_variable_name (
+        sober_naming_selected_implementation_variable (
                 "${SOBER_LIBRARY_NAME}" "${SOBER_VARIANT_NAME}" "${SERVICE_NAME}" IMPLEMENTATION_VARIABLE_NAME)
 
-        sober_internal_get_implementation_target_name (
+        sober_naming_implementation_target (
                 "${SERVICE_NAME}" "${${IMPLEMENTATION_VARIABLE_NAME}}" IMPLEMENTATION_TARGET)
 
-        sober_internal_get_service_usage_scope_variable_name (
+        sober_internal_naming_service_usage_scope_variable (
                 "${SOBER_LIBRARY_NAME}" "${SERVICE_NAME}" SCOPE_VARIABLE_NAME)
 
         if (SOBER_UNABLE_TO_USE_LINK_VARIANTS)
@@ -194,7 +200,7 @@ function (sober_variant_end)
             # In separate target mode services, that do not require implementation headers, will not provide
             # API headers (otherwise API headers would always be exposed in link mode), therefore we must
             # manually link API headers target.
-            sober_internal_get_service_target_name ("${SERVICE_NAME}" SERVICE_TARGET)
+            sober_naming_service_target ("${SERVICE_NAME}" SERVICE_TARGET)
             target_link_libraries ("${SOBER_VARIANT_TARGET}" "${${SCOPE_VARIABLE_NAME}}" ${SERVICE_TARGET})
 
             set (LINK_TYPE "${${SCOPE_VARIABLE_NAME}}")
@@ -216,7 +222,7 @@ function (sober_library_end)
                  "    Forced to compile variants separately because several services use implementation headers:")
 
         foreach (SERVICE_NAME IN LISTS SOBER_USED_SERVICES)
-            sober_internal_get_service_target_name ("${SERVICE_NAME}" SERVICE_TARGET)
+            sober_naming_service_target ("${SERVICE_NAME}" SERVICE_TARGET)
             get_property (USES_IMPLEMENTATION_HEADERS TARGET ${SERVICE_TARGET}
                           PROPERTY INTERFACE_USES_IMPLEMENTATION_HEADERS)
 
@@ -225,15 +231,15 @@ function (sober_library_end)
             endif ()
         endforeach ()
     else ()
-        sober_internal_get_library_base_target_name ("${SOBER_LIBRARY_NAME}" BASE_LIBRARY_TARGET)
+        sober_naming_library_base_target ("${SOBER_LIBRARY_NAME}" BASE_LIBRARY_TARGET)
         add_library ("${BASE_LIBRARY_TARGET}" "${SOBER_LIBRARY_TYPE}" "${SOBER_LIBRARY_SOURCES}")
         sober_internal_library_add_base_target_dependencies ("${BASE_LIBRARY_TARGET}")
 
         foreach (SERVICE_NAME IN LISTS SOBER_USED_SERVICES)
-            sober_internal_get_service_usage_scope_variable_name (
+            sober_internal_naming_service_usage_scope_variable (
                     "${SOBER_LIBRARY_NAME}" "${SERVICE_NAME}" SCOPE_VARIABLE_NAME)
 
-            sober_internal_get_service_target_name ("${SERVICE_NAME}" SERVICE_TARGET)
+            sober_naming_service_target ("${SERVICE_NAME}" SERVICE_TARGET)
             target_link_libraries ("${BASE_LIBRARY_TARGET}" "${${SCOPE_VARIABLE_NAME}}" ${SERVICE_TARGET})
         endforeach ()
     endif ()
