@@ -1,6 +1,0 @@
-add_subdirectory (ApplicationLogic)
-add_subdirectory (ConsoleASCIIDisplay)
-add_subdirectory (TestStubDisplay)
-add_subdirectory (BinaryPersistence)
-add_subdirectory (PlainTextPersistence)
-add_subdirectory (TestStubPersistence)
