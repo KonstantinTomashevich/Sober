@@ -32,7 +32,7 @@ framework for API-Implementation separation on build configuration level.
   different implementations, by creating **Library** target family with
   **Variant**s as library instances. This principle makes it's easy to provide
   library instances with dependency sets, that are optimized for particular
-  tasks, or ot provide library instance with test mocks instead of dependencies.
+  tasks, or to provide library instance with test mocks instead of dependencies.
   
 - **Sober** allows to specify **Implementation**s for **Variant**s from command 
   line, therefore making it easy to use different implementations for different 
@@ -79,7 +79,7 @@ sober_implementation_begin (<ImplementationName>)
     # Also, if service depends on other services, it's better to provide 
     # implementation for this service as public used service inside library variant.
 
-    # Use sober_naming_* functions to names of targets, that are created by Sober.
+    # Use sober_naming_* functions to get names of targets, that are created by Sober.
     sober_naming_variant_target (<LibraryName> <VariantName> IMPLEMENTATION_LIBRARY_TARGET)
     sober_implementation_link_library ("${IMPLEMENTATION_LIBRARY_TARGET}")
 sober_implementation_end ()
@@ -88,11 +88,14 @@ sober_implementation_end ()
 ### Setup library
 
 ```cmake
+# Library root CMakeLists.txt.
 sober_library_begin (<LibraryName> <STATIC|SHARED>)
-    # WARNING: Used services must be configured BEFORE libraries, that use them!
-    # If service usage is private, library users will not be able to use service API.
-    sober_library_use_service (<ServiceName> <PRIVATE|PUBLIC>)
-    # You can use multiple services by calling 
+    # WARNING: Used services must be configured BEFORE libraries that use them!
+    # Second parameter defines service usage visibility scope, which is used to 
+    # link service and implementation targets to library targets. For example, 
+    # if service usage is PRIVATE, library users will not be able to use service API.
+    sober_library_use_service (<ServiceName> <PUBLIC|PRIVATE|INTERFACE>)
+    # You can add multiple services usage by calling 
     # sober_library_use_service multiple times.
 
     sober_library_set_sources (<Source>...)
@@ -108,18 +111,21 @@ sober_library_begin (<LibraryName> <STATIC|SHARED>)
     # sober_library_link_library multiple times.
 
     sober_variant_begin (<VariantName>)
+        # Inside variant configuration routine you can customize 
+        # service implementation selection for this variant.
+
         # If you want to both override service default implementation and to allow user
         # to specify other implementation for this variant, use next command:
         sober_variant_set_default_implementation (<ServiceName> <ImplementationName>)
 
-        # If this variant must use only specified implementation, use next command:
+        # If this variant should always use specified implementation, use next command:
         sober_variant_freeze_implementation (<ServiceName> <ImplementationName>)
         
         # If neither sober_variant_set_default_implementation or
         # sober_variant_freeze_implementation was called for used service,
         # this service default implementation will be used instead.
     sober_variant_end ()
-    # You can create multiple variants by using 
+    # You can create multiple variants by adding
     # sober_variant_begin - sober_variant_end routine multiple times.
 sober_library_end ()
 ```
