@@ -174,7 +174,7 @@ function (sober_library_end)
         endforeach ()
     endif ()
 
-    message (STATUS "Library \"${SOBER_LIBRARY_NAME}\" configuration started.")
+    message (STATUS "Library \"${SOBER_LIBRARY_NAME}\" configuration finished.")
     unset (SOBER_LIBRARY_NAME PARENT_SCOPE)
     unset (SOBER_LIBRARY_TYPE PARENT_SCOPE)
 endfunction ()

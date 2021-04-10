@@ -25,6 +25,22 @@ function (sober_naming_variant_target LIBRARY_NAME VARIANT_NAME OUTPUT_VARIABLE)
     set ("${OUTPUT_VARIABLE}" "${LIBRARY_NAME}${VARIANT_NAME}" PARENT_SCOPE)
 endfunction ()
 
+function (sober_naming_test_library SERVICE_NAME OUTPUT_VARIABLE)
+    set ("${OUTPUT_VARIABLE}" "Test${SERVICE_NAME}" PARENT_SCOPE)
+endfunction ()
+
+function (sober_naming_test_variant IMPLEMENTATION_NAME OUTPUT_VARIABLE)
+    set ("${OUTPUT_VARIABLE}" "${IMPLEMENTATION_NAME}" PARENT_SCOPE)
+endfunction ()
+
+function (sober_naming_test_runner VARIANT_TARGET_NAME OUTPUT_VARIABLE)
+    set ("${OUTPUT_VARIABLE}" "${VARIANT_TARGET_NAME}TestRunner" PARENT_SCOPE)
+endfunction ()
+
+function (sober_naming_test_runner_ctest_name VARIANT_TARGET_NAME OUTPUT_VARIABLE)
+    set ("${OUTPUT_VARIABLE}" "Test${VARIANT_TARGET_NAME}" PARENT_SCOPE)
+endfunction ()
+
 function (sober_naming_library_variable LIBRARY_NAME VARIABLE_NAME OUTPUT_VARIABLE)
     set ("${OUTPUT_VARIABLE}" "SOBER_${LIBRARY_NAME}_${VARIABLE_NAME}" PARENT_SCOPE)
 endfunction ()
