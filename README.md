@@ -98,7 +98,7 @@ sober_library_begin (<LibraryName> <STATIC|SHARED>)
     # You can add multiple services usage by calling 
     # sober_library_use_service multiple times.
 
-    sober_library_set_sources (<Source>...)
+    sober_library_set_sources (<SourcesList>)
     
     # Adds include directory to all targets from Sober library.
     sober_library_include_directory (<PUBLIC|PRIVATE|INTERFACE> <IncludeDirectory>)
