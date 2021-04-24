@@ -38,6 +38,10 @@ function (sober_library_begin LIBRARY_NAME LIBRARY_TYPE)
     unset (SOBER_LIBRARY_PUBLIC_LINK_LIBRARIES PARENT_SCOPE)
     unset (SOBER_LIBRARY_PRIVATE_LINK_LIBRARIES PARENT_SCOPE)
     unset (SOBER_LIBRARY_INTERFACE_LINK_LIBRARIES PARENT_SCOPE)
+
+    unset (SOBER_LIBRARY_PUBLIC_COMPILE_OPTIONS PARENT_SCOPE)
+    unset (SOBER_LIBRARY_PRIVATE_COMPILE_OPTIONS PARENT_SCOPE)
+    unset (SOBER_LIBRARY_INTERFACE_COMPILE_OPTIONS PARENT_SCOPE)
     unset (SOBER_VARIANT_CONFIGURATION_STARTED PARENT_SCOPE)
 endfunction ()
 
@@ -132,9 +136,45 @@ function (sober_library_link_library LINK_SCOPE LIBRARY_NAME)
     endif ()
 endfunction ()
 
-# Adds library include directories and link library dependencies to given target.
+# Part of library configuration top level routine. Should be called before variant additions.
+function (sober_library_public_compile_options)
+    if (SOBER_VARIANT_CONFIGURATION_STARTED)
+        message (SEND_ERROR "Sober: caught attempt to append public compile options after variants configuration!")
+        return ()
+    endif ()
+
+    message (STATUS "    Appending public compile options: ${ARGV}.")
+    list (APPEND SOBER_LIBRARY_PUBLIC_COMPILE_OPTIONS ${ARGV})
+    set (SOBER_LIBRARY_PUBLIC_COMPILE_OPTIONS ${SOBER_LIBRARY_PUBLIC_COMPILE_OPTIONS} PARENT_SCOPE)
+endfunction ()
+
+# Part of library configuration top level routine. Should be called before variant additions.
+function (sober_library_private_compile_options)
+    if (SOBER_VARIANT_CONFIGURATION_STARTED)
+        message (SEND_ERROR "Sober: caught attempt to append private compile options after variants configuration!")
+        return ()
+    endif ()
+
+    message (STATUS "    Appending private compile options: ${ARGV}.")
+    list (APPEND SOBER_LIBRARY_PRIVATE_COMPILE_OPTIONS ${ARGV})
+    set (SOBER_LIBRARY_PRIVATE_COMPILE_OPTIONS ${SOBER_LIBRARY_PRIVATE_COMPILE_OPTIONS} PARENT_SCOPE)
+endfunction ()
+
+# Part of library configuration top level routine. Should be called before variant additions.
+function (sober_library_interface_compile_options)
+    if (SOBER_VARIANT_CONFIGURATION_STARTED)
+        message (SEND_ERROR "Sober: caught attempt to append interface compile options after variants configuration!")
+        return ()
+    endif ()
+
+    message (STATUS "    Appending interface compile options: ${ARGV}.")
+    list (APPEND SOBER_LIBRARY_INTERFACE_COMPILE_OPTIONS ${ARGV})
+    set (SOBER_LIBRARY_INTERFACE_COMPILE_OPTIONS ${SOBER_LIBRARY_INTERFACE_COMPILE_OPTIONS} PARENT_SCOPE)
+endfunction ()
+
+# Adds library include directories, link library dependencies and compile options to given target.
 # Can be called inside library configuration top level routine or variant configuration secondary level routine.
-function (sober_internal_library_add_base_target_dependencies TARGET)
+function (sober_internal_library_configure_as_base_target TARGET)
     target_include_directories ("${TARGET}" PUBLIC ${SOBER_LIBRARY_PUBLIC_INCLUDES})
     target_include_directories ("${TARGET}" PRIVATE ${SOBER_LIBRARY_PRIVATE_INCLUDES})
     target_include_directories ("${TARGET}" INTERFACE ${SOBER_LIBRARY_INTERFACE_INCLUDES})
@@ -142,6 +182,10 @@ function (sober_internal_library_add_base_target_dependencies TARGET)
     target_link_libraries ("${TARGET}" PUBLIC ${SOBER_LIBRARY_PUBLIC_LINK_LIBRARIES})
     target_link_libraries ("${TARGET}" PRIVATE ${SOBER_LIBRARY_PRIVATE_LINK_LIBRARIES})
     target_link_libraries ("${TARGET}" INTERFACE ${SOBER_LIBRARY_INTERFACE_LINK_LIBRARIES})
+
+    target_compile_options ("${TARGET}" PUBLIC ${SOBER_LIBRARY_PUBLIC_COMPILE_OPTIONS})
+    target_compile_options ("${TARGET}" PRIVATE ${SOBER_LIBRARY_PRIVATE_COMPILE_OPTIONS})
+    target_compile_options ("${TARGET}" INTERFACE ${SOBER_LIBRARY_INTERFACE_COMPILE_OPTIONS})
 endfunction ()
 
 # Library configuration top level routine closer.
@@ -163,7 +207,7 @@ function (sober_library_end)
     else ()
         sober_naming_library_base_target ("${SOBER_LIBRARY_NAME}" BASE_LIBRARY_TARGET)
         add_library ("${BASE_LIBRARY_TARGET}" "${SOBER_LIBRARY_TYPE}" "${SOBER_LIBRARY_SOURCES}")
-        sober_internal_library_add_base_target_dependencies ("${BASE_LIBRARY_TARGET}")
+        sober_internal_library_configure_as_base_target ("${BASE_LIBRARY_TARGET}")
 
         foreach (SERVICE_NAME IN LISTS SOBER_USED_SERVICES)
             sober_internal_naming_service_usage_scope_variable (
@@ -174,7 +218,7 @@ function (sober_library_end)
         endforeach ()
     endif ()
 
-    message (STATUS "Library \"${SOBER_LIBRARY_NAME}\" configuration started.")
+    message (STATUS "Library \"${SOBER_LIBRARY_NAME}\" configuration finished.")
     unset (SOBER_LIBRARY_NAME PARENT_SCOPE)
     unset (SOBER_LIBRARY_TYPE PARENT_SCOPE)
 endfunction ()
@@ -191,7 +235,7 @@ function (sober_variant_begin VARIANT_NAME)
 
     if (SOBER_UNABLE_TO_USE_LINK_VARIANTS)
         add_library ("${SOBER_VARIANT_TARGET}" "${SOBER_LIBRARY_TYPE}" ${SOBER_LIBRARY_SOURCES})
-        sober_internal_library_add_base_target_dependencies ("${SOBER_VARIANT_TARGET}")
+        sober_internal_library_configure_as_base_target ("${SOBER_VARIANT_TARGET}")
     else ()
         add_library ("${SOBER_VARIANT_TARGET}" INTERFACE)
         sober_naming_library_base_target ("${SOBER_LIBRARY_NAME}" BASE_LIBRARY_TARGET)

@@ -146,6 +146,24 @@ function (sober_implementation_link_library LIBRARY)
     target_link_libraries ("${SOBER_IMPLEMENTATION_TARGET}" "${SOBER_IMPLEMENTATION_DEPENDENCIES_SCOPE}" ${LIBRARY})
 endfunction ()
 
+# Part of implementation configuration secondary level routine.
+function (sober_implementation_public_compile_options)
+    message (STATUS "           Appending public compile options: ${ARGV}.")
+    target_compile_options ("${SOBER_IMPLEMENTATION_TARGET}" PUBLIC ${ARGV})
+endfunction ()
+
+# Part of implementation configuration secondary level routine.
+function (sober_implementation_private_compile_options)
+    message (STATUS "           Appending private compile options: ${ARGV}.")
+    target_compile_options ("${SOBER_IMPLEMENTATION_TARGET}" PRIVATE ${ARGV})
+endfunction ()
+
+# Part of implementation configuration secondary level routine.
+function (sober_implementation_interface_compile_options)
+    message (STATUS "           Appending interface compile options: ${ARGV}.")
+    target_compile_options ("${SOBER_IMPLEMENTATION_TARGET}" INTERFACE ${ARGV})
+endfunction ()
+
 # Implementation configuration secondary level routine closer. Part of service configuration top level routine.
 function (sober_implementation_end)
     # API includes must be affected by dependencies scope too, otherwise
