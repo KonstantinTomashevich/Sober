@@ -38,7 +38,7 @@ function (sober_naming_test_runner VARIANT_TARGET_NAME OUTPUT_VARIABLE)
 endfunction ()
 
 function (sober_naming_test_runner_ctest_name VARIANT_TARGET_NAME OUTPUT_VARIABLE)
-    set ("${OUTPUT_VARIABLE}" "Test${VARIANT_TARGET_NAME}" PARENT_SCOPE)
+    set ("${OUTPUT_VARIABLE}" "${VARIANT_TARGET_NAME}" PARENT_SCOPE)
 endfunction ()
 
 function (sober_naming_library_variable LIBRARY_NAME VARIABLE_NAME OUTPUT_VARIABLE)
