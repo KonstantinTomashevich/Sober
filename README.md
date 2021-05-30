@@ -1,4 +1,4 @@
-# Sober CMake framework [WIP]
+# Sober CMake framework
 
 **Sober** stands for **S**ervice **O**riented **B**uild**er**, compact CMake
 framework for API-Implementation separation on build configuration level.
@@ -39,6 +39,10 @@ framework for API-Implementation separation on build configuration level.
   build types. For example, you can use plain text serializer for debug 
   builds, so you can easily check output files, and binary serializer for 
   release builds for better performance.
+
+- **Sober** allows to easily setup implementation-agnostic tests for 
+  **Service**s using special set of macros that setup **Library** with 
+  tests and create runners for each test variant.
 
 ## Cheat sheet
 
@@ -128,6 +132,38 @@ sober_library_begin (<LibraryName> <STATIC|SHARED>)
     # You can create multiple variants by adding
     # sober_variant_begin - sober_variant_end routine multiple times.
 sober_library_end ()
+```
+
+### Setup tests for service
+
+```cmake
+# Test library root CMakeLists.txt.
+# Creates test library for given service.
+sober_test_begin (<ServiceName>)
+    file (GLOB_RECURSE SOURCES *.cpp)
+    file (GLOB_RECURSE HEADERS *.hpp)
+    list (APPEND SOURCES ${HEADERS})
+
+    # Service will be used automatically in private scope.
+    
+    # Tests for services are created on top of library, 
+    # therefore all operations, except variant setup, are the same.
+
+    sober_library_set_sources (<SourcesList>)
+    sober_library_include_directory (<PUBLIC|PRIVATE|INTERFACE> <IncludeDirectory>)
+
+    # Use these methods to setup test variants instead of standard variants.
+    # Test variant name must be equal to the name of any service implementation.
+    # For each test variant, test executable will be created and registered in CTest.
+    sober_test_variant_begin (<ImplementationName>)
+        # Given implementation for tested service will be frozen
+        # automatically using sober_variant_freeze_implementation.
+        # There is no restrictions for other used services.
+    sober_test_variant_end ()
+
+    # You can create multiple test variants. 
+    # Usually you need to create test variant for each implementation.
+sober_test_end ()
 ```
 
 ## Links
