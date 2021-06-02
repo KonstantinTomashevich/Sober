@@ -1,7 +1,7 @@
 # Sober CMake framework
 
 **Sober** stands for **S**ervice **O**riented **B**uild**er**, compact CMake
-framework for API-Implementation separation on build configuration level.
+framework for API-Implementation separation at build configuration level.
 
 ## Terms
 
