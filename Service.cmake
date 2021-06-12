@@ -94,7 +94,7 @@ Sober: unable to make \"${IMPLEMENTATION_NAME}\" default implementation for serv
     set_property (TARGET ${SOBER_SERVICE_TARGET}
                   PROPERTY INTERFACE_SERVICE_DEFAULT_IMPLEMENTATION ${IMPLEMENTATION_NAME})
 
-    message (STATUS "        Selected as default implementation!")
+    message (STATUS "        Implementation \"${IMPLEMENTATION_NAME}\" selected as default implementation!")
 endfunction ()
 
 # Service configuration top level routine closer.
@@ -122,45 +122,60 @@ function (sober_implementation_begin IMPLEMENTATION_NAME)
     sober_naming_implementation_target (
             "${SOBER_SERVICE_NAME}" "${IMPLEMENTATION_NAME}" SOBER_IMPLEMENTATION_TARGET)
     set (SOBER_IMPLEMENTATION_TARGET "${SOBER_IMPLEMENTATION_TARGET}" PARENT_SCOPE)
+
+    # If implementation library type is INTERFACE, we must override implementation dependencies scope to INTERFACE too,
+    # otherwise dependency linking will not be done correctly. Implementation dependencies scope will be overridden 
+    # only if it was PUBLIC, otherwise error will be reported.
+    set (SOBER_THIS_IMPLEMENTATION_DEPENDENCIES_SCOPE "${SOBER_IMPLEMENTATION_DEPENDENCIES_SCOPE}" PARENT_SCOPE)
 endfunction ()
 
 # Part of implementation configuration secondary level routine.
 function (sober_implementation_setup_target LIBRARY_TYPE LIBRARY_SOURCES)
-    message (STATUS "           Adding implementation library \"${SOBER_IMPLEMENTATION_TARGET}\".")
-    message (STATUS "           Library type is \"${LIBRARY_TYPE}\".")
+    message (STATUS "            Adding implementation library \"${SOBER_IMPLEMENTATION_TARGET}\".")
+    message (STATUS "            Library type is \"${LIBRARY_TYPE}\".")
     add_library ("${SOBER_IMPLEMENTATION_TARGET}" ${LIBRARY_TYPE} ${LIBRARY_SOURCES})
+
+    if ("${LIBRARY_TYPE}" STREQUAL "INTERFACE")
+        if ("${SOBER_THIS_IMPLEMENTATION_DEPENDENCIES_SCOPE}" STREQUAL "PRIVATE")
+            message (SEND_ERROR
+                     "Implementation library type can be INTERFACE only if service requires implementation headers!")
+        else ()
+            set (SOBER_THIS_IMPLEMENTATION_DEPENDENCIES_SCOPE "INTERFACE" PARENT_SCOPE)
+        endif ()
+    endif ()
 endfunction ()
 
 # Part of implementation configuration secondary level routine.
 function (sober_implementation_include_directory DIRECTORY)
-    message (STATUS
-             "           Including directory \"${DIRECTORY}\" to \"${SOBER_IMPLEMENTATION_DEPENDENCIES_SCOPE}\" scope.")
+    message (STATUS "\
+            Including directory \"${DIRECTORY}\" to \"${SOBER_THIS_IMPLEMENTATION_DEPENDENCIES_SCOPE}\" scope.")
     target_include_directories ("${SOBER_IMPLEMENTATION_TARGET}"
-                                "${SOBER_IMPLEMENTATION_DEPENDENCIES_SCOPE}" ${DIRECTORY})
+                                "${SOBER_THIS_IMPLEMENTATION_DEPENDENCIES_SCOPE}" ${DIRECTORY})
 endfunction ()
 
 # Part of implementation configuration secondary level routine.
 function (sober_implementation_link_library LIBRARY)
     message (STATUS
-             "           Linking library \"${LIBRARY}\" to \"${SOBER_IMPLEMENTATION_DEPENDENCIES_SCOPE}\" scope.")
-    target_link_libraries ("${SOBER_IMPLEMENTATION_TARGET}" "${SOBER_IMPLEMENTATION_DEPENDENCIES_SCOPE}" ${LIBRARY})
+             "            Linking library \"${LIBRARY}\" to \"${SOBER_THIS_IMPLEMENTATION_DEPENDENCIES_SCOPE}\" scope.")
+    target_link_libraries ("${SOBER_IMPLEMENTATION_TARGET}"
+                           "${SOBER_THIS_IMPLEMENTATION_DEPENDENCIES_SCOPE}" ${LIBRARY})
 endfunction ()
 
 # Part of implementation configuration secondary level routine.
 function (sober_implementation_public_compile_options)
-    message (STATUS "           Appending public compile options: ${ARGV}.")
+    message (STATUS "            Appending public compile options: ${ARGV}.")
     target_compile_options ("${SOBER_IMPLEMENTATION_TARGET}" PUBLIC ${ARGV})
 endfunction ()
 
 # Part of implementation configuration secondary level routine.
 function (sober_implementation_private_compile_options)
-    message (STATUS "           Appending private compile options: ${ARGV}.")
+    message (STATUS "            Appending private compile options: ${ARGV}.")
     target_compile_options ("${SOBER_IMPLEMENTATION_TARGET}" PRIVATE ${ARGV})
 endfunction ()
 
 # Part of implementation configuration secondary level routine.
 function (sober_implementation_interface_compile_options)
-    message (STATUS "           Appending interface compile options: ${ARGV}.")
+    message (STATUS "            Appending interface compile options: ${ARGV}.")
     target_compile_options ("${SOBER_IMPLEMENTATION_TARGET}" INTERFACE ${ARGV})
 endfunction ()
 
@@ -169,9 +184,10 @@ function (sober_implementation_end)
     # API includes must be affected by dependencies scope too, otherwise
     # library link variants will always expose used services APIs.
     target_link_libraries ("${SOBER_IMPLEMENTATION_TARGET}"
-                           "${SOBER_IMPLEMENTATION_DEPENDENCIES_SCOPE}" ${SOBER_SERVICE_TARGET})
+                           "${SOBER_THIS_IMPLEMENTATION_DEPENDENCIES_SCOPE}" ${SOBER_SERVICE_TARGET})
 
-    message (STATUS "        Implementation \"${SOBER_IMPLEMENTATION_NAME}\" configuration started.")
+    message (STATUS "        Implementation \"${SOBER_IMPLEMENTATION_NAME}\" configuration finished.")
     unset (SOBER_IMPLEMENTATION_NAME PARENT_SCOPE)
     unset (SOBER_IMPLEMENTATION_TARGET PARENT_SCOPE)
+    unset (SOBER_THIS_IMPLEMENTATION_DEPENDENCIES_SCOPE PARENT_SCOPE)
 endfunction ()
