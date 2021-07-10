@@ -37,6 +37,10 @@ function (sober_naming_test_runner VARIANT_TARGET_NAME OUTPUT_VARIABLE)
     set ("${OUTPUT_VARIABLE}" "${VARIANT_TARGET_NAME}TestRunner" PARENT_SCOPE)
 endfunction ()
 
+function (sober_naming_test_collection SERVICE_NAME OUTPUT_VARIABLE)
+    set ("${OUTPUT_VARIABLE}" "${SERVICE_NAME}Tests" PARENT_SCOPE)
+endfunction ()
+
 function (sober_naming_test_runner_ctest_name VARIANT_TARGET_NAME OUTPUT_VARIABLE)
     set ("${OUTPUT_VARIABLE}" "${VARIANT_TARGET_NAME}" PARENT_SCOPE)
 endfunction ()

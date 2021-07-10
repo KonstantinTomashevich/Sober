@@ -17,6 +17,9 @@ macro (sober_test_begin SERVICE_NAME)
     set (SOBER_TEST_SERVICE_NAME "${SERVICE_NAME}")
     unset (SOBER_TEST_VARIANTS)
 
+    sober_naming_test_collection ("${SERVICE_NAME}" COLLECTION_NAME)
+    add_custom_target ("${COLLECTION_NAME}" COMMENT "Build all tests for ${SERVICE_NAME} service.")
+
     sober_naming_test_library ("${SERVICE_NAME}" LIBRARY_NAME)
     sober_library_begin ("${LIBRARY_NAME}" STATIC)
     sober_library_use_service ("${SERVICE_NAME}" PRIVATE)
@@ -26,7 +29,9 @@ endmacro ()
 macro (sober_test_end)
     sober_library_end ()
     message (STATUS "Creating tests runners for \"${SOBER_TEST_SERVICE_NAME}\".")
+
     sober_naming_test_library ("${SOBER_TEST_SERVICE_NAME}" LIBRARY_NAME)
+    sober_naming_test_collection ("${SOBER_TEST_SERVICE_NAME}" COLLECTION_NAME)
 
     foreach (VARIANT_NAME IN LISTS SOBER_TEST_VARIANTS)
         sober_naming_variant_target ("${LIBRARY_NAME}" "${VARIANT_NAME}" VARIANT_TARGET_NAME)
@@ -36,7 +41,9 @@ macro (sober_test_end)
         message (STATUS "    Creating tests runner \"${TEST_RUNNER_NAME}\" named as \"${TEST_RUNNER_CTEST_NAME}\".")
         add_executable ("${TEST_RUNNER_NAME}" "${SOBER_TEST_RUNNER_STUB_SOURCE}")
         target_link_libraries ("${TEST_RUNNER_NAME}" PRIVATE "${VARIANT_TARGET_NAME}")
+
         add_test (NAME "${TEST_RUNNER_CTEST_NAME}" COMMAND "${TEST_RUNNER_NAME}")
+        add_dependencies ("${COLLECTION_NAME}" "${TEST_RUNNER_NAME}")
     endforeach ()
 
     message (STATUS "Testing configuration for service \"${SOBER_TEST_SERVICE_NAME}\" finished.")
