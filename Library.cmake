@@ -46,7 +46,7 @@ function (sober_library_begin LIBRARY_NAME LIBRARY_TYPE)
 endfunction ()
 
 # Part of library configuration top level routine. Should be called before variant additions.
-function (sober_library_use_service SERVICE_NAME USAGE_SCOPE)
+function (sober_library_use_service USAGE_SCOPE SERVICE_NAME)
     if (SOBER_VARIANT_CONFIGURATION_STARTED)
         message (SEND_ERROR "Sober: caught attempt to add service usage after variants configuration!")
         return ()

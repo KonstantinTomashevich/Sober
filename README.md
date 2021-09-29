@@ -95,10 +95,10 @@ sober_implementation_end ()
 # Library root CMakeLists.txt.
 sober_library_begin (<LibraryName> <STATIC|SHARED>)
     # WARNING: Used services must be configured BEFORE libraries that use them!
-    # Second parameter defines service usage visibility scope, which is used to 
+    # First parameter defines service usage visibility scope, which is used to 
     # link service and implementation targets to library targets. For example, 
     # if service usage is PRIVATE, library users will not be able to use service API.
-    sober_library_use_service (<ServiceName> <PUBLIC|PRIVATE|INTERFACE>)
+    sober_library_use_service (<PUBLIC|PRIVATE|INTERFACE> <ServiceName>)
     # You can add multiple services usage by calling 
     # sober_library_use_service multiple times.
 
