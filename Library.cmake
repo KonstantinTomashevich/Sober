@@ -6,7 +6,7 @@ include_guard (GLOBAL)
 include (${CMAKE_CURRENT_LIST_DIR}/Naming.cmake)
 
 # Generates name for library internal variable, that holds service usage scope. These variables should
-# not be used by other modules or scipts, therefore this function can not be defined in Naming.cmake.
+# not be used by other modules or scripts, therefore this function can not be defined in Naming.cmake.
 function (sober_internal_naming_service_usage_scope_variable LIBRARY_NAME SERVICE_NAME OUTPUT_VARIABLE)
     sober_naming_library_variable ("${LIBRARY_NAME}" "${SERVICE_NAME}_SCOPE" "${OUTPUT_VARIABLE}")
     set ("${OUTPUT_VARIABLE}" "${${OUTPUT_VARIABLE}}" PARENT_SCOPE)
@@ -28,6 +28,7 @@ function (sober_library_begin LIBRARY_NAME LIBRARY_TYPE)
     set (SOBER_LIBRARY_TYPE "${LIBRARY_TYPE}" PARENT_SCOPE)
 
     unset (SOBER_USED_SERVICES PARENT_SCOPE)
+    unset (SOBER_USED_SHARED_SERVICES PARENT_SCOPE)
     unset (SOBER_LIBRARY_SOURCES PARENT_SCOPE)
     unset (SOBER_UNABLE_TO_USE_LINK_VARIANTS PARENT_SCOPE)
 
@@ -66,8 +67,14 @@ function (sober_library_use_service USAGE_SCOPE SERVICE_NAME)
         return ()
     endif ()
 
-    list (FIND SOBER_USED_SERVICES ${SERVICE_NAME} FOUND_INDEX)
-    if (FOUND_INDEX EQUAL -1)
+    if ("${SERVICE_NAME}" IN_LIST SOBER_USED_SERVICES)
+        message (SEND_ERROR "Sober: service \"${SERVICE_NAME}\" is already used by library \"${SOBER_LIBRARY_NAME}\"!")
+        
+    elseif ("${SERVICE_NAME}" IN_LIST SOBER_USED_SHARED_SERVICES)
+        message (SEND_ERROR "\
+Sober: service \"${SERVICE_NAME}\" is already selected for shared usage by library \"${SOBER_LIBRARY_NAME}\"!")
+
+    else ()
         get_property (USES_IMPLEMENTATION_HEADERS TARGET ${SERVICE_TARGET}
                       PROPERTY INTERFACE_USES_IMPLEMENTATION_HEADERS)
 
@@ -83,10 +90,31 @@ function (sober_library_use_service USAGE_SCOPE SERVICE_NAME)
 
         set ("${SCOPE_VARIABLE_NAME}" "${USAGE_SCOPE}" PARENT_SCOPE)
         message (STATUS "    Using service \"${SERVICE_NAME}\" within \"${USAGE_SCOPE}\" scope.")
-    else ()
-        message (WARNING "Sober: service \"${SERVICE_NAME}\" is already used by library \"${SOBER_LIBRARY_NAME}\"!")
     endif ()
 endfunction ()
+
+# Part of library configuration top level routine. Should be called before variant additions.
+# Sometimes we don't need to use separate service implementation for each variant, but service uses
+# implementation headers and therefore triggers separate compilation for each variant. To avoid separate
+# compilation such services should be linked as libraries. Macro is used because we are wrapping
+# sober_library_link_library function.
+macro (sober_library_use_shared_service USAGE_SCOPE SERVICE_NAME DEFAULT_IMPLEMENTATION)
+    if ("${SERVICE_NAME}" IN_LIST SOBER_USED_SERVICES)
+        message (SEND_ERROR "\
+Sober: service \"${SERVICE_NAME}\" is already selected for per-variant usage by library \"${SOBER_LIBRARY_NAME}\"!")
+
+    elseif ("${SERVICE_NAME}" IN_LIST SOBER_USED_SHARED_SERVICES)
+        message (SEND_ERROR "Sober: service \"${SERVICE_NAME}\" is already used by library \"${SOBER_LIBRARY_NAME}\"!")
+    endif ()
+
+    list (APPEND SOBER_USED_SHARED_SERVICES "${SERVICE_NAME}")
+    sober_naming_selected_shared_implementation_variable ("${SOBER_LIBRARY_NAME}" "${SERVICE_NAME}" VARIABLE_NAME)
+    set ("${VARIABLE_NAME}" "${DEFAULT_IMPLEMENTATION}" CACHE STRING
+         "Selected \"${SERVICE_NAME}\" service shared implementation for library library \"${SOBER_LIBRARY_NAME}\".")
+
+    sober_naming_implementation_target ("${SERVICE_NAME}" "${${VARIABLE_NAME}}" SHARED_IMPLEMENTATION_TARGET)
+    sober_library_link_library ("${USAGE_SCOPE}" "${SHARED_IMPLEMENTATION_TARGET}")
+endmacro ()
 
 # Part of library configuration top level routine. Should be called before variant additions.
 function (sober_library_set_sources LIBRARY_SOURCES)
@@ -251,7 +279,10 @@ function (sober_variant_set_default_implementation SERVICE_NAME DEFAULT_IMPLEMEN
     # TODO: Think about context validation. Will it really slow down configuration stage?
     sober_naming_selected_implementation_variable (
             "${SOBER_LIBRARY_NAME}" "${SOBER_VARIANT_NAME}" "${SERVICE_NAME}" VARIABLE)
-    set ("${VARIABLE}" "${DEFAULT_IMPLEMENTATION}" CACHE STRING)
+
+    set ("${VARIABLE}" "${DEFAULT_IMPLEMENTATION}" CACHE STRING "\
+Selected \"${SERVICE_NAME}\" service implementation for variant \"${SOBER_VARIANT_NAME}\" of library \
+\"${SOBER_LIBRARY_NAME}\".")
 endfunction ()
 
 # Selects service default implementation and sets this value directly to according variable
