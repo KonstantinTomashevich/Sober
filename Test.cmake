@@ -22,7 +22,7 @@ macro (sober_test_begin SERVICE_NAME)
 
     sober_naming_test_library ("${SERVICE_NAME}" LIBRARY_NAME)
     sober_library_begin ("${LIBRARY_NAME}" STATIC)
-    sober_library_use_service (PRIVATE "${SERVICE_NAME}")
+    sober_library_use_service (PER_VARIANT PRIVATE "${SERVICE_NAME}")
 endmacro ()
 
 # Wraps sober_library_end, generates and registers test runners for each registered test variant.

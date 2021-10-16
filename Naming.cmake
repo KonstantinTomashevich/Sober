@@ -55,6 +55,7 @@ function (sober_naming_variant_variable LIBRARY_NAME VARIANT_NAME VARIABLE_NAME 
 endfunction ()
 
 # Generates name for variable, that stores service selected implementation for given library variant.
+# Checked only if service usage mode is PER_VARIANT (see sober_library_use_service command).
 # This naming pattern is added as global, because this variable could be passed as build option.
 function (sober_naming_selected_implementation_variable LIBRARY_NAME VARIANT_NAME SERVICE_NAME OUTPUT_VARIABLE)
     sober_naming_variant_variable (
@@ -64,9 +65,8 @@ function (sober_naming_selected_implementation_variable LIBRARY_NAME VARIANT_NAM
 endfunction ()
 
 # Generates name for variable, that stores service selected implementation for all variants of given library.
-# Checked only by shared service usage (see sober_library_use_shared_service command) and ignored by per-variant
-# service usage (see sober_library_use_service command). This naming pattern is added as global, because this 
-# variable could be passed as build option.
+# Checked only if service usage mode is SHARED (see sober_library_use_service command).
+# This naming pattern is added as global, because this variable could be passed as build option.
 function (sober_naming_selected_shared_implementation_variable LIBRARY_NAME SERVICE_NAME OUTPUT_VARIABLE)
     sober_naming_library_variable (
             "${LIBRARY_NAME}" "${SERVICE_NAME}_SELECTED_SHARED_IMPLEMENTATION" "${OUTPUT_VARIABLE}")
