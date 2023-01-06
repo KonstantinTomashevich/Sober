@@ -288,12 +288,10 @@ function (sober_library_end)
             sober_internal_naming_service_usage_mode_variable (
                     "${SOBER_LIBRARY_NAME}" "${SERVICE_NAME}" MODE_VARIABLE_NAME)
 
-            if (NOT ${${MODE_VARIABLE_NAME}} STREQUAL "SHARED")
-                sober_internal_naming_service_usage_scope_variable (
-                        "${SOBER_LIBRARY_NAME}" "${SERVICE_NAME}" SCOPE_VARIABLE_NAME)
-                sober_naming_service_target ("${SERVICE_NAME}" SERVICE_TARGET)
-                target_link_libraries ("${BASE_LIBRARY_TARGET}" "${${SCOPE_VARIABLE_NAME}}" ${SERVICE_TARGET})
-            endif ()
+            sober_internal_naming_service_usage_scope_variable (
+                    "${SOBER_LIBRARY_NAME}" "${SERVICE_NAME}" SCOPE_VARIABLE_NAME)
+            sober_naming_service_target ("${SERVICE_NAME}" SERVICE_TARGET)
+            target_link_libraries ("${BASE_LIBRARY_TARGET}" "${${SCOPE_VARIABLE_NAME}}" ${SERVICE_TARGET})
         endforeach ()
     endif ()
 
