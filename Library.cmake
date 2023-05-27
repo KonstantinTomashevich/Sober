@@ -26,9 +26,10 @@ function (sober_library_begin LIBRARY_NAME LIBRARY_TYPE)
 
     if (NOT "${LIBRARY_TYPE}" STREQUAL "STATIC" AND
             NOT "${LIBRARY_TYPE}" STREQUAL "SHARED" AND
-            NOT "${LIBRARY_TYPE}" STREQUAL "INTERFACE")
+            NOT "${LIBRARY_TYPE}" STREQUAL "INTERFACE" AND
+            NOT "${LIBRARY_TYPE}" STREQUAL "OBJECT")
 
-        message (FATAL_ERROR "Sober: library type must be \"STATIC\", \"SHARED\" or \"INTERFACE\"!")
+        message (FATAL_ERROR "Sober: library type must be \"STATIC\", \"SHARED\", \"INTERFACE\" or \"OBJECT\"!")
     endif ()
 
     set (SOBER_LIBRARY_NAME "${LIBRARY_NAME}" PARENT_SCOPE)
@@ -50,6 +51,19 @@ function (sober_library_begin LIBRARY_NAME LIBRARY_TYPE)
     unset (SOBER_LIBRARY_PRIVATE_COMPILE_OPTIONS PARENT_SCOPE)
     unset (SOBER_LIBRARY_INTERFACE_COMPILE_OPTIONS PARENT_SCOPE)
     unset (SOBER_VARIANT_CONFIGURATION_STARTED PARENT_SCOPE)
+endfunction ()
+
+# Part of library configuration top level routine. Should be called before variant additions.
+# Explicitly forces compile-time variants instead of link-time variants. 
+# In some complicated dependency graphs base library might become dependency of the variant
+# and this would result in fatal errors. To solve situations like that we need this function.
+function (sober_library_forbid_link_variants)
+    if (SOBER_VARIANT_CONFIGURATION_STARTED)
+        message (SEND_ERROR "Sober: caught attempt to forbid link variants after variants configuration!")
+        return ()
+    endif ()
+
+    set (SOBER_UNABLE_TO_USE_LINK_VARIANTS TRUE PARENT_SCOPE)
 endfunction ()
 
 # Part of library configuration top level routine. Should be called before variant additions.
@@ -249,9 +263,9 @@ function (sober_internal_library_configure_as_base_target TARGET)
     target_include_directories ("${TARGET}" PRIVATE ${SOBER_LIBRARY_PRIVATE_INCLUDES})
     target_include_directories ("${TARGET}" INTERFACE ${SOBER_LIBRARY_INTERFACE_INCLUDES})
 
-    target_link_libraries ("${TARGET}" PUBLIC ${SOBER_LIBRARY_PUBLIC_LINK_LIBRARIES})
-    target_link_libraries ("${TARGET}" PRIVATE ${SOBER_LIBRARY_PRIVATE_LINK_LIBRARIES})
-    target_link_libraries ("${TARGET}" INTERFACE ${SOBER_LIBRARY_INTERFACE_LINK_LIBRARIES})
+    sober_target_link_libraries ("${TARGET}" PUBLIC ${SOBER_LIBRARY_PUBLIC_LINK_LIBRARIES})
+    sober_target_link_libraries ("${TARGET}" PRIVATE ${SOBER_LIBRARY_PRIVATE_LINK_LIBRARIES})
+    sober_target_link_libraries ("${TARGET}" INTERFACE ${SOBER_LIBRARY_INTERFACE_LINK_LIBRARIES})
 
     target_compile_options ("${TARGET}" PUBLIC ${SOBER_LIBRARY_PUBLIC_COMPILE_OPTIONS})
     target_compile_options ("${TARGET}" PRIVATE ${SOBER_LIBRARY_PRIVATE_COMPILE_OPTIONS})
@@ -291,7 +305,7 @@ function (sober_library_end)
             sober_internal_naming_service_usage_scope_variable (
                     "${SOBER_LIBRARY_NAME}" "${SERVICE_NAME}" SCOPE_VARIABLE_NAME)
             sober_naming_service_target ("${SERVICE_NAME}" SERVICE_TARGET)
-            target_link_libraries ("${BASE_LIBRARY_TARGET}" "${${SCOPE_VARIABLE_NAME}}" ${SERVICE_TARGET})
+            sober_target_link_libraries ("${BASE_LIBRARY_TARGET}" "${${SCOPE_VARIABLE_NAME}}" ${SERVICE_TARGET})
         endforeach ()
     endif ()
 
@@ -316,7 +330,7 @@ function (sober_variant_begin VARIANT_NAME)
     else ()
         add_library ("${SOBER_VARIANT_TARGET}" INTERFACE)
         sober_naming_library_base_target ("${SOBER_LIBRARY_NAME}" BASE_LIBRARY_TARGET)
-        target_link_libraries ("${SOBER_VARIANT_TARGET}" INTERFACE "${BASE_LIBRARY_TARGET}")
+        sober_target_link_libraries ("${SOBER_VARIANT_TARGET}" INTERFACE "${BASE_LIBRARY_TARGET}")
     endif ()
 endfunction ()
 
@@ -377,7 +391,7 @@ function (sober_variant_end)
 
         if (${${MODE_VARIABLE_NAME}} STREQUAL "EXPECTED" AND SOBER_UNABLE_TO_USE_LINK_VARIANTS)
             sober_naming_service_target ("${SERVICE_NAME}" SERVICE_TARGET)
-            target_link_libraries ("${SOBER_VARIANT_TARGET}" "${${SCOPE_VARIABLE_NAME}}" ${SERVICE_TARGET})
+            sober_target_link_libraries ("${SOBER_VARIANT_TARGET}" "${${SCOPE_VARIABLE_NAME}}" ${SERVICE_TARGET})
 
         elseif (${${MODE_VARIABLE_NAME}} STREQUAL "PER_VARIANT")
             sober_naming_selected_implementation_variable (
@@ -407,14 +421,14 @@ function (sober_variant_end)
                 # API headers (otherwise API headers would always be exposed in link mode), therefore we must
                 # manually link API headers target.
                 sober_naming_service_target ("${SERVICE_NAME}" SERVICE_TARGET)
-                target_link_libraries ("${SOBER_VARIANT_TARGET}" "${${SCOPE_VARIABLE_NAME}}" ${SERVICE_TARGET})
+                sober_target_link_libraries ("${SOBER_VARIANT_TARGET}" "${${SCOPE_VARIABLE_NAME}}" ${SERVICE_TARGET})
 
                 set (LINK_TYPE "${${SCOPE_VARIABLE_NAME}}")
             else ()
                 set (LINK_TYPE INTERFACE)
             endif ()
 
-            target_link_libraries (${SOBER_VARIANT_TARGET} "${LINK_TYPE}" "${IMPLEMENTATION_TARGET}")
+            sober_target_link_libraries (${SOBER_VARIANT_TARGET} "${LINK_TYPE}" "${IMPLEMENTATION_TARGET}")
         endif ()
     endforeach ()
 

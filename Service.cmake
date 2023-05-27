@@ -41,7 +41,7 @@ endfunction ()
 # Part of service configuration top level routine.
 function (sober_service_add_api_dependency TARGET)
     message (STATUS "    Adding API dependency: \"${TARGET}\".")
-    target_link_libraries (${SOBER_SERVICE_TARGET} INTERFACE "${TARGET}")
+    sober_target_link_libraries (${SOBER_SERVICE_TARGET} INTERFACE "${TARGET}")
 endfunction ()
 
 # Informs Sober that given service API will include implementation headers (for example, with template
@@ -157,7 +157,7 @@ endfunction ()
 function (sober_implementation_link_library LIBRARY)
     message (STATUS
             "            Linking library \"${LIBRARY}\" to \"${SOBER_THIS_IMPLEMENTATION_DEPENDENCIES_SCOPE}\" scope.")
-    target_link_libraries ("${SOBER_IMPLEMENTATION_TARGET}"
+    sober_target_link_libraries ("${SOBER_IMPLEMENTATION_TARGET}"
             "${SOBER_THIS_IMPLEMENTATION_DEPENDENCIES_SCOPE}" ${LIBRARY})
 endfunction ()
 
@@ -183,7 +183,7 @@ endfunction ()
 function (sober_implementation_end)
     # API includes must be affected by dependencies scope too, otherwise
     # library link variants will always expose used services APIs.
-    target_link_libraries ("${SOBER_IMPLEMENTATION_TARGET}"
+    sober_target_link_libraries ("${SOBER_IMPLEMENTATION_TARGET}"
             "${SOBER_THIS_IMPLEMENTATION_DEPENDENCIES_SCOPE}" ${SOBER_SERVICE_TARGET})
 
     message (STATUS "        Implementation \"${SOBER_IMPLEMENTATION_NAME}\" configuration finished.")

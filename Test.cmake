@@ -40,7 +40,7 @@ macro (sober_test_end)
 
         message (STATUS "    Creating tests runner \"${TEST_RUNNER_NAME}\" named as \"${TEST_RUNNER_CTEST_NAME}\".")
         add_executable ("${TEST_RUNNER_NAME}" "${SOBER_TEST_RUNNER_STUB_SOURCE}")
-        target_link_libraries ("${TEST_RUNNER_NAME}" PUBLIC "${VARIANT_TARGET_NAME}")
+        sober_target_link_libraries ("${TEST_RUNNER_NAME}" PUBLIC "${VARIANT_TARGET_NAME}")
 
         add_test (NAME "${TEST_RUNNER_CTEST_NAME}" COMMAND "${TEST_RUNNER_NAME}")
         add_dependencies ("${COLLECTION_NAME}" "${TEST_RUNNER_NAME}")
