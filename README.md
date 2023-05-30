@@ -63,7 +63,7 @@ sober_service_end ()
 
 # Implementation CMakeLists.txt.
 sober_implementation_begin (<ImplementationName>)    
-    sober_implementation_setup_target (<STATIC|SHARED> <Source>...)
+    sober_implementation_setup_target (<LibraryType> <Source>...)
 
     # If service is implementation-agnostic, implementation headers will be 
     # private. Otherwise they will be visible to service users.
@@ -82,7 +82,7 @@ sober_implementation_end ()
 
 ```cmake
 # Library root CMakeLists.txt.
-sober_library_begin (<LibraryName> <STATIC|SHARED>)
+sober_library_begin (<LibraryName> <LibraryType>)
     # WARNING: Used services must be configured BEFORE libraries that use them!
     # First parameter defines service usage mode, see more about these modes in command documentation.
     # Second parameter defines service usage visibility scope, which is used to 
@@ -124,7 +124,7 @@ sober_library_end ()
 ```cmake
 # Test library root CMakeLists.txt.
 # Creates test library for given service.
-sober_test_begin (<ServiceName>)
+sober_test_begin (<ServiceName> <TestLibraryType>)
     file (GLOB_RECURSE SOURCES *.cpp)
     file (GLOB_RECURSE HEADERS *.hpp)
     list (APPEND SOURCES ${HEADERS})

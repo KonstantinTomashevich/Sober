@@ -12,7 +12,7 @@ set (SOBER_TEST_RUNNER_STUB_SOURCE "${CMAKE_CURRENT_LIST_DIR}/Stub.cpp")
 
 # Wraps sober_library_begin, SERVICE_NAME must be equal to the name of service, that will be tested using these tests.
 # Given service will be automatically used within private scope.
-macro (sober_test_begin SERVICE_NAME)
+macro (sober_test_begin SERVICE_NAME LIBRARY_TYPE)
     message (STATUS "Creating tests library for service \"${SERVICE_NAME}\".")
     set (SOBER_TEST_SERVICE_NAME "${SERVICE_NAME}")
     unset (SOBER_TEST_VARIANTS)
@@ -21,7 +21,7 @@ macro (sober_test_begin SERVICE_NAME)
     add_custom_target ("${COLLECTION_NAME}" COMMENT "Build all tests for ${SERVICE_NAME} service.")
 
     sober_naming_test_library ("${SERVICE_NAME}" LIBRARY_NAME)
-    sober_library_begin ("${LIBRARY_NAME}" STATIC)
+    sober_library_begin ("${LIBRARY_NAME}" "${LIBRARY_TYPE}")
     sober_library_use_service (PER_VARIANT PRIVATE "${SERVICE_NAME}")
 endmacro ()
 
